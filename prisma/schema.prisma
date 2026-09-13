@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Adjust provider if using mysql, sqlite, etc.
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionStatus {
+  WAITING_PAYMENT
+  WAITING_CONFIRMATION
+  DONE
+  REJECTED
+  EXPIRED
+  CANCELED
+}
+
+enum StatusUpdater {
+  SYSTEM
+  ORGANIZER
+  CUSTOMER
+}
+
+model Customer {
+  id              String   @id @default(uuid()) // UUIDv4
+  name            String
+  email           String   @unique
+  password        String
+  profile_picture String?
+  referral_code   String   @unique // System-generated unique string
+  referred_by_id  String?  // Self-referencing FK to referrer
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relationships
+  referred_by   Customer?     @relation("Referral", fields: [referred_by_id], references: [id])
+  referrals     Customer[]    @relation("Referral")
+  point_records PointRecord[]
+  coupons       Coupon[]
+  transactions  Transaction[]
+  reviews       Review[]
+
+  @@map("customers")
+}
+
+model Organizer {
+  id              String   @id @default(uuid()) // UUIDv4
+  name            String
+  email           String   @unique
+  password        String
+  profile_picture String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relationships
+  events Event[]
+
+  @@map("organizers")
+}
+
+model PointRecord {
+  id          String   @id @default(uuid()) // UUIDv4
+  attendee_id String
+  amount      Decimal
+  expires_at  DateTime // 3 months from creation
+  is_used     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  // Relationships
+  attendee Customer @relation(fields: [attendee_id], references: [id])
+
+  @@map("point_records")
+}
+
+model Coupon {
+  id              String   @id @default(uuid()) // UUIDv4
+  attendee_id     String
+  discount_amount Decimal
+  expires_at      DateTime // 3 months from creation
+  is_used         Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  // Relationships
+  attendee    Customer     @relation(fields: [attendee_id], references: [id])
+  transaction Transaction?
+
+  @@map("coupons")
+}
+
+model Event {
+  id              String   @id @default(uuid()) // UUIDv4
+  organizer_id    String
+  name            String
+  description     String   @db.Text
+  category        String
+  location        String
+  start_date      DateTime
+  end_date        DateTime
+  available_seats Int
+  is_free         Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relationships
+  organizer    Organizer    @relation(fields: [organizer_id], references: [id])
+  ticket_types TicketType[]
+  vouchers     Voucher[]
+  transactions Transaction[]
+  reviews      Review[]
+
+  @@map("events")
+}
+
+model TicketType {
+  id       String  @id @default(uuid()) // UUIDv4
+  event_id String
+  name     String
+  price    Decimal // Prices stored in IDR
+
+  // Relationships
+  event        Event         @relation(fields: [event_id], references: [id])
+  transactions Transaction[]
+
+  @@map("ticket_types")
+}
+
+model Voucher {
+  id              String   @id @default(uuid()) // UUIDv4
+  event_id        String
+  code            String
+  discount_amount Decimal
+  start_date      DateTime
+  end_date        DateTime
+
+  // Relationships
+  event        Event         @relation(fields: [event_id], references: [id])
+  transactions Transaction[]
+
+  @@map("vouchers")
+}
+
+model Transaction {
+  id                    String            @id @default(uuid()) // UUIDv4
+  attendee_id           String
+  event_id              String
+  ticket_type_id        String
+  quantity              Int
+  points_used           Decimal           @default(0)
+  voucher_id            String?
+  coupon_id             String?           @unique // 1-to-1 relationship with Coupon
+  total_price           Decimal           // Final calculated price in IDR
+  status                TransactionStatus
+  status_updated_by     StatusUpdater?    // Tracks who/what triggered the current status
+  payment_proof_url     String?
+  proof_uploaded_at     DateTime?
+  expires_at            DateTime          // Deadline for WAITING_PAYMENT (created_at + 2 hours)
+  confirmation_deadline DateTime?         // Deadline for organizer review (proof_uploaded_at + 3 days)
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  // Relationships
+  attendee    Customer   @relation(fields: [attendee_id], references: [id])
+  event       Event      @relation(fields: [event_id], references: [id])
+  ticket_type TicketType @relation(fields: [ticket_type_id], references: [id])
+  voucher     Voucher?   @relation(fields: [voucher_id], references: [id])
+  coupon      Coupon?    @relation(fields: [coupon_id], references: [id])
+
+  @@map("transactions")
+}
+
+model Review {
+  id          String   @id @default(uuid()) // UUIDv4
+  attendee_id String
+  event_id    String
+  rating      Int      // 1-5 scale
+  comment     String   @db.Text
+  created_at  DateTime @default(now())
+
+  // Relationships
+  attendee Customer @relation(fields: [attendee_id], references: [id])
+  event    Event    @relation(fields: [event_id], references: [id])
+
+  @@map("reviews")
+}
