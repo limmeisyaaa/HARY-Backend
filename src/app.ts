@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express, { type ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
+import { APP_PORT } from './config/env.config';
 
 export const app = express();
 app.use(cors());
@@ -22,3 +23,8 @@ const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => 
 };
 
 app.use(errorHandler);
+
+// Start the server
+app.listen(APP_PORT, () => {
+  console.log(`Server is running on http://localhost:${APP_PORT}`);
+});
