@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import cors from 'cors';
-import express, { type ErrorRequestHandler } from 'express';
-import { ZodError } from 'zod';
+import express from 'express';
 import { APP_PORT } from './config/env.config';
+import authRouter from './routes/auth.routes';
+import appErrorHandler from './errors/app-error.handler';
 
 export const app = express();
 app.use(cors());
@@ -12,17 +13,8 @@ app.get('/api', (_request, response) => {
   response.json({ status: 'ok' });
 });
 
-const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
-  if (error instanceof ZodError) {
-    response.status(400).json({ message: 'Validation failed', errors: error.flatten() });
-    return;
-  }
-
-  console.error(error);
-  response.status(500).json({ message: 'Internal server error' });
-};
-
-app.use(errorHandler);
+app.use('/api/auth', authRouter);
+app.use(appErrorHandler);
 
 // Start the server
 app.listen(APP_PORT, () => {

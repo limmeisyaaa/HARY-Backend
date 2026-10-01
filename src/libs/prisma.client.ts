@@ -1,7 +1,7 @@
 
 import { PrismaNeon } from '@prisma/adapter-neon'
 import { DATABASE_URL } from '../config/env.config'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../generated/prisma'
 
 const adapter = new PrismaNeon({
   connectionString: DATABASE_URL,
