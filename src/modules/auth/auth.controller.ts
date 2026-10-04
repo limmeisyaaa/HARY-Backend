@@ -1,115 +1,161 @@
 import type { Request, Response } from "express";
-import { AppError } from "../../errors/app-error";
-import { CustomerRepository } from "../../repositories/customer.repository";
-import { OrganizerRepository } from "../../repositories/organizer.repository";
-import {
-  generateAccessToken,
-  hashPassword,
-  verifyPassword,
-} from "./auth.service";
+import cookieConfig from "../../config/cookie.config";
 import {
   credentialsSchema,
   customerSignUpSchema,
   organizerSignUpSchema,
 } from "../../validators/auth.validator";
-import { generateReferralCode } from "../../utils/secrete.key";
-
-const customerRepository = new CustomerRepository();
-const organizerRepository = new OrganizerRepository();
+import { OrganizerRole } from "../../generated/prisma";
+import AppError from "../../errors/app-error";
+import CustomerRepository from "../../repositories/customer.repository";
+import AuthService from "./auth.service";
+import OrganizerRepository from "../../repositories/organizer.repository";
+import { ACCESS_EXPIRES_IN, ACCESS_SECRET, REFRESH_EXPIRES_IN, REFRESH_SECRET } from "../../config/env.config";
+import { AuthPayload } from "../../interfaces/auth-payload.interface";
+import { uploadProfilePicture } from "../cloudinary/cloudinary.service";
 
 const AuthController = {
   async signUpCustomer(req: Request, res: Response) {
     const input = customerSignUpSchema.parse(req.body);
-    if (await customerRepository.findByEmail(input.email)) {
+    if (await CustomerRepository.findAuthCredentialsByEmail(input.email)) {
       throw new AppError("An account with this email already exists!", 409);
     }
 
     let referredById: string | undefined;
     if (input.referredByCode) {
-      const referrer = await customerRepository.findByReferralCode(input.referredByCode);
+      const referrer = await CustomerRepository.findByReferralCode(input.referredByCode);
       if (!referrer) throw new AppError("Referral code not found!", 400);
       referredById = referrer.id;
     }
 
-    const customer = await customerRepository.create({
+    const profilePicture = req.file
+      ? await uploadProfilePicture(req.file, input.email, input.userType)
+      : undefined;
+
+    const customer = await CustomerRepository.create({
       name: input.name,
       email: input.email,
-      password: await hashPassword(input.password),
-      referralCode: generateReferralCode(),
+      password: await AuthService.hashPassword(input.password),
+      ...(profilePicture ? { profilePicture } : {}),
+      referralCode: await AuthService.generateReferralCode(),
       ...(referredById ? { referredBy: { connect: { id: referredById } } } : {}),
     });
-    const token = generateAccessToken({
+    
+    const jwtPayload = {
       id: customer.id,
       email: customer.email,
-      userType: "CUSTOMER",
-    });
+      userType: input.userType,
+    };
 
-    res.status(201).json({
-      message: "Customer sign up success!",
-      data: {
-        token,
-        user: { id: customer.id, name: customer.name, email: customer.email },
-      },
-    });
+    const accessToken = AuthService.generateToken(
+			jwtPayload,
+			ACCESS_SECRET,
+			ACCESS_EXPIRES_IN,
+		);
+
+    const refreshToken = AuthService.generateToken(
+          jwtPayload,
+          REFRESH_SECRET,
+          REFRESH_EXPIRES_IN,
+    );
+
+    res.cookie("refresh-token", refreshToken, cookieConfig).send({
+			message: "Customer sign up success!",
+			data: {
+        token: accessToken,
+				user: customer
+			},
+		});
   },
 
   async signUpOrganizer(req: Request, res: Response) {
     const input = organizerSignUpSchema.parse(req.body);
-    if (await organizerRepository.findByEmail(input.email)) {
+    if (await OrganizerRepository.findAuthCredentialsByEmail(input.email)) {
       throw new AppError("An account with this email already exists!", 409);
     }
 
-    const organizer = await organizerRepository.create({
+    const profilePicture = req.file
+      ? await uploadProfilePicture(req.file, input.email, input.userType)
+      : undefined;
+
+    const organizer = await OrganizerRepository.create({
       name: input.name,
       email: input.email,
-      password: await hashPassword(input.password),
-      role: input.role ?? "ADMIN", // Default role is "ADMIN" if not provided
+      password: await AuthService.hashPassword(input.password),
+      ...(profilePicture ? { profilePicture } : {}),
+      role: input.role as OrganizerRole ?? OrganizerRole.ADMIN, // Default role is "ADMIN" if not provided
     });
 
-    const token = generateAccessToken({
+    const jwtPayload = {
       id: organizer.id,
       email: organizer.email,
-      userType: "ORGANIZER",
+      userType: input.userType,
       role: organizer.role,
-    });
+    };
 
-    res.status(201).json({
-      message: "Organizer sign up success!",
-      data: {
-        token,
-        user: {
-          id: organizer.id,
-          name: organizer.name,
-          email: organizer.email,
-          role: organizer.role,
-        },
-      },
-    });
+    const accessToken = AuthService.generateToken(
+			jwtPayload,
+			ACCESS_SECRET,
+			ACCESS_EXPIRES_IN,
+		);
+
+    const refreshToken = AuthService.generateToken(
+          jwtPayload,
+          REFRESH_SECRET,
+          REFRESH_EXPIRES_IN,
+    );
+
+    res.cookie("refresh-token", refreshToken, cookieConfig).send({
+			message: "Organizer sign up success!",
+			data: {
+        token: accessToken,
+				user: organizer
+			},
+		});
   },
 
   async signInCustomer(req: Request, res: Response) {
     const input = credentialsSchema.parse(req.body);
-    const customer = await customerRepository.findByEmail(input.email);
-    if (!customer || !(await verifyPassword(input.password, customer.password))) {
-      throw new AppError("Invalid email or password!", 401);
-    }
+    
+    const customer = await CustomerRepository.findAuthCredentialsByEmail(input.email);
+    if(!customer) throw new AppError("Invalid email or password!", 401);
 
-    const token = generateAccessToken({
+    const isPasswordValid = await AuthService.comparePassword(input.password, customer.password || "");
+    if (!isPasswordValid) throw new AppError("Invalid email or password!", 401);
+
+    const { password: p, ...safeUser } = customer;
+
+    const jwtPayload = {
       id: customer.id,
       email: customer.email,
-      userType: "CUSTOMER",
-    });
+      userType: input.userType,
+    };
 
-    res.status(200).json({
-      message: "Customer sign in success!",
-      data: { token, user: { id: customer.id, name: customer.name, email: customer.email } },
-    });
+    const accessToken = AuthService.generateToken(
+      jwtPayload,
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN,
+    );
+
+    const refreshToken = AuthService.generateToken(
+          jwtPayload,
+          REFRESH_SECRET,
+          REFRESH_EXPIRES_IN,
+    );
+
+    res.cookie("refresh-token", refreshToken, cookieConfig).send({
+			message: "Customer sign in success!",
+			data: {
+        token: accessToken,
+				user: safeUser
+			},
+		});
   },
 
   async signInOrganizer(req: Request, res: Response) {
     const input = credentialsSchema.parse(req.body);
-    const organizer = await organizerRepository.findByEmail(input.email);
-    if (!organizer || !(await verifyPassword(input.password, organizer.password))) {
+    const organizer = await OrganizerRepository.findAuthCredentialsByEmail(input.email);
+    if (!organizer || !(await AuthService.comparePassword(input.password, organizer.password))) {
       throw new AppError("Invalid email or password!", 401);
     }
 
@@ -117,26 +163,98 @@ const AuthController = {
       throw new AppError("Organizer role mismatch!", 403);
     }
 
-    const token = generateAccessToken({
+    const { password: p, ...safeUser } = organizer;
+
+    const jwtPayload ={
       id: organizer.id,
       email: organizer.email,
-      userType: "ORGANIZER",
+      userType: input.userType,
       role: organizer.role,
-    });
+    };
 
-    res.status(200).json({
-      message: "Organizer sign in success!",
-      data: {
-        token,
-        user: {
-          id: organizer.id,
-          name: organizer.name,
-          email: organizer.email,
-          role: organizer.role,
-        },
+    const accessToken = AuthService.generateToken(
+      jwtPayload,
+      ACCESS_SECRET,
+      ACCESS_EXPIRES_IN,
+    );
+
+    const refreshToken = AuthService.generateToken(
+          jwtPayload,
+          REFRESH_SECRET,
+          REFRESH_EXPIRES_IN,
+    );
+
+    res.cookie("refresh-token", refreshToken, cookieConfig).send({
+			message: "Organizer sign in success!",
+			data: {
+        token: accessToken,
+				user: safeUser
       },
     });
   },
+
+  async signOut(req: Request, res: Response) {
+		if (!req.auth) throw new AppError("Unauthorized access!", 401);
+
+		res.clearCookie("refresh-token", cookieConfig).send({
+			message: "Sign out success!",
+			data: null,
+		});
+	},
+  
+	async refreshToken(req: Request, res: Response) {
+		const existingRefToken = req.cookies["refresh-token"];
+		if (!existingRefToken) throw new AppError("Refresh token not found!", 401);
+
+		const decoded = AuthService.verifyToken(
+			existingRefToken,
+			REFRESH_SECRET,
+		) as AuthPayload;
+
+		if (!decoded) throw new AppError("Refresh token invalid!", 401);
+
+		const { iat, exp, ...payload } = decoded;
+
+		const accessToken = AuthService.generateToken(
+			payload,
+			ACCESS_SECRET,
+			ACCESS_EXPIRES_IN,
+		);
+
+		const refreshToken = AuthService.generateToken(
+			payload,
+			REFRESH_SECRET,
+			REFRESH_EXPIRES_IN,
+		);
+
+		res.cookie("refresh-token", refreshToken, cookieConfig).send({
+			message: "Sign in success!",
+			data: {
+				token: accessToken,
+			},
+		});
+	},
+
+	async getAuthCredential(req: Request, res: Response) {
+		if (!req.auth) throw new AppError("Unauthorized access!", 401);
+
+    let safeUser;
+    if(req.auth.userType === "ORGANIZER") {
+      safeUser = await OrganizerRepository.findById(String(req.auth.id));
+      safeUser = safeUser ? { ...safeUser, userType: "ORGANIZER" } : null;
+    } else if(req.auth.userType === "CUSTOMER") {
+		  safeUser = await CustomerRepository.findById(String(req.auth.id));
+      safeUser = safeUser ? { ...safeUser, userType: "CUSTOMER" } : null;
+    }
+
+		if (!safeUser) throw new AppError("User not found!", 404);
+
+		res.send({
+			message: "Auth credentials retrieved successfully!",
+			data: safeUser,
+		});
+	},
 };
+
 
 export default AuthController;

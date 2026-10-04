@@ -22,7 +22,7 @@ export type AuthPayload = AuthCustomerPayload | AuthOrganizerPayload;
 declare global {
 	namespace Express {
 		interface Request {
-			auth?: AuthPayload;
+			auth: AuthPayload;
 		}
 	}
 }

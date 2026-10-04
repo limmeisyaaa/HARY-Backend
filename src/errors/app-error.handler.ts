@@ -1,25 +1,48 @@
 import type { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
-import { AppError } from "./app-error";
+import type { $ZodIssue } from "zod/v4/core";
+import AppError from "./app-error";
+
+export const errorNormalizer = (
+	error: AppError,
+	_req: Request,
+	_res: Response,
+	next: NextFunction,
+) => {
+	const { JsonWebTokenError, TokenExpiredError } = jwt;
+
+	if (error instanceof TokenExpiredError) {
+		return next(new AppError("Token expired", 401, error));
+	}
+
+	if (error instanceof JsonWebTokenError) {
+		return next(new AppError("Invalid token", 401, error));
+	}
+
+	if (error instanceof ZodError) {
+		const messages = error.issues
+			.map((err: $ZodIssue) => `${err.path.join(" ")}: ${err.message}`)
+			.join("; ");
+
+		return next(new AppError(messages, 400, error.issues));
+	}
+
+	return next(error);
+};
 
 const appErrorHandler = (
-	error: Error,
+	error: AppError,
 	_req: Request,
 	res: Response,
 	_next: NextFunction,
 ) => {
-	if (error instanceof ZodError) {
-		res.status(400).json({ message: "Validation failed", errors: error.flatten() });
-		return;
-	}
-
-	if (error instanceof AppError) {
-		res.status(error.statusCode).json({ message: error.message });
-		return;
-	}
-
-	console.error(error);
-	res.status(500).json({ message: "Internal server error" });
+	//console.table(error);
+	return res.status(error.status || 500).send({
+		status: error.status || 500,
+		message: error.message || "Internal Server Error",
+		error: error.object || null,
+	});
 };
 
 export default appErrorHandler;

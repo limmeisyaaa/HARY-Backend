@@ -1,28 +1,42 @@
 import type { NextFunction, Request, Response } from "express";
 import { OrganizerRole } from "../generated/prisma";
-import { AppError } from "../errors/app-error";
-import { verifyAccessToken } from "../modules/auth/auth.service";
+import AppError from "../errors/app-error";
+import AuthService from "../modules/auth/auth.service";
+import { ACCESS_SECRET } from "../config/env.config";
+import { AuthPayload } from "../interfaces/auth-payload.interface";
 
-export const verifyToken = (req: Request, _res: Response, next: NextFunction) => {
-  const authorization = req.headers.authorization;
-	const [scheme, token, ...extraParts] = authorization?.trim().split(/\s+/) ?? [];
-	if (scheme?.toLowerCase() !== "bearer" || !token || extraParts.length > 0) {
-    throw new AppError("A valid bearer token is required!", 401);
+export const verifyAccessToken = async (
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+) => {
+  const token = req.headers.authorization?.split(' ')[1] || "";
+  if (!token) throw new AppError("A valid bearer token is required!", 401);
+
+  const decoded = AuthService.verifyToken(token, ACCESS_SECRET);
+
+  if (!decoded) throw new AppError("Access token is invalid or expired!", 401);
+
+  //Make sure if userType is ORGANIZER, role must be present in the token
+  const payload = decoded as AuthPayload;
+  if(payload.userType === "ORGANIZER" && !payload.role) {
+    throw new AppError("Organizer role is missing in the token!", 401);
   }
 
-  const payload = verifyAccessToken(token);
-  if (!payload) throw new AppError("Access token is invalid or expired!", 401);
-
   req.auth = payload;
+  
   next();
 };
 
-export const userTypeGuard = (userType: "CUSTOMER" | "ORGANIZER") =>
-  (req: Request, _res: Response, next: NextFunction) => {
+export const userTypeGuard = (userType: "CUSTOMER" | "ORGANIZER") => (
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+) => {
 		if (!req.auth) throw new AppError("Authentication is required!", 401);
-		if (req.auth.userType !== userType) {
-      throw new AppError("Unauthorized access!", 403);
-    }
+
+		if (req.auth.userType !== userType) throw new AppError("Unauthorized access!", 403);
+
     next();
   };
 

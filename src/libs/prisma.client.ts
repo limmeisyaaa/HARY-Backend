@@ -7,4 +7,10 @@ const adapter = new PrismaNeon({
   connectionString: DATABASE_URL,
 })
 
-export const prisma = new PrismaClient({ adapter })
+export const prisma = new PrismaClient({ 
+  adapter,
+  omit: {
+    customer: { password: true },
+    organizer: { password: true }, // Omit password field by default
+  },
+});
