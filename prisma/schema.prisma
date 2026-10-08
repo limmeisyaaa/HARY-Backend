@@ -23,20 +23,8 @@ model Customer {
   pointRecords   PointRecord[]
   reviews        Review[]
   transactions   Transaction[]
-  accounts       Account[]
 
   @@map("customers")
-}
-
-model Account {
-  id                    Int        @id @default(autoincrement())
-  provider              String     // e.g. "google"
-  providerAccountId     String     @map("provider_account_id")
-  customerId            String     @map("customer_id")
-  customer              Customer   @relation(fields: [customerId], references: [id])
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
 }
 
 model Organizer {
