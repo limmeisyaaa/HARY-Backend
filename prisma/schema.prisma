@@ -42,13 +42,14 @@ model Organizer {
 }
 
 model PointRecord {
-  id          String    @id @default(uuid())
-  customerId  String    @map("customer_id")
-  amount      Decimal   @db.Decimal(65, 2)
-  expiresAt   DateTime  @map("expires_at")
-  isUsed      Boolean   @default(false) @map("is_used")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  customer    Customer  @relation(fields: [customerId], references: [id])
+  id          String      @id @default(uuid())
+  customerId  String      @map("customer_id")
+  amount      Decimal     @db.Decimal(65, 2)
+  expiresAt   DateTime    @map("expires_at")
+  isUsed      Boolean     @default(false) @map("is_used")
+  status      GiftStatus  @map("status")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  customer    Customer    @relation(fields: [customerId], references: [id])
 
   @@map("point_records")
 }
@@ -58,6 +59,7 @@ model Coupon {
   customerId     String       @map("customer_id")
   discountAmount Decimal      @map("discount_amount") @db.Decimal(65, 2)
   expiresAt      DateTime     @map("expires_at")
+  status         GiftStatus   @map("status")
   isUsed         Boolean      @default(false) @map("is_used")
   createdAt      DateTime     @default(now()) @map("created_at")
   customer       Customer     @relation(fields: [customerId], references: [id])
@@ -106,6 +108,7 @@ model Voucher {
   discountAmount Decimal       @map("discount_amount") @db.Decimal(65, 2)
   startDate      DateTime      @map("start_date")
   endDate        DateTime      @map("end_date")
+  status         GiftStatus    @map("status")
   transactions   Transaction[]
   event          Event         @relation(fields: [eventId], references: [id])
 
@@ -170,4 +173,10 @@ enum StatusUpdater {
 enum OrganizerRole {
   ADMIN
   SUPER_ADMIN
+}
+
+enum GiftStatus {
+  EXPIRED
+  AVAILABLE
+  REDEEMED
 }
