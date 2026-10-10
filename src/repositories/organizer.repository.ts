@@ -19,8 +19,22 @@ const OrganizerRepository = {
 		});
 	},
 
-  create: async (data: Prisma.OrganizerCreateInput) => {
+	findAuthCredentialsById: async (id: string): Promise<Organizer | null> => {
+		return await prisma.organizer.findUnique({
+			where: { id },
+			omit: { password: false },
+		});
+	},
+
+  	create: async (data: Prisma.OrganizerCreateInput) => {
 		return await prisma.organizer.create({data});
+	},
+
+	editProfile: async (args: Prisma.OrganizerUpdateArgs): Promise<SafeUser | null> => {
+		return await prisma.organizer.update({
+			...args,
+			omit: { password: true },
+		});
 	},
 }
 
