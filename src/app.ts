@@ -5,6 +5,7 @@ import { APP_PORT, CLIENT_URL } from './config/env.config';
 import authRouter from './routers/auth.router';
 import appErrorHandler, { errorNormalizer } from './errors/app-error.handler';
 import cookieParser from 'cookie-parser';
+import cronRunner from './scheduler/runner';
 
 export const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.use(
     credentials: true,
   })
 )
+cronRunner(); // Call the cronRunner function to start the cron job
 
 app.get('/api', (_request, response) => {
   response.json({ status: 'ok' });

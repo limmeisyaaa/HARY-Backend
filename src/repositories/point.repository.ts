@@ -1,4 +1,4 @@
-import { Prisma, PointRecord } from "../generated/prisma";
+import { Prisma, PointRecord, GiftStatus } from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
 
 const PointRepository = {
@@ -15,18 +15,32 @@ const PointRepository = {
 		});
 	},
 
-	findAvailableActivePointsByCustomerId: async (customerId: string): Promise<PointRecord[] | null> => {
+	findAvailablePointsByCustomerId: async (customerId: string): Promise<PointRecord[] | null> => {
 		return await prisma.$queryRaw`
 			SELECT * 
 			FROM "point_records" 
 			WHERE "is_used" = false 
 			AND "customer_id" =  ${customerId}
-			AND "expires_at" > NOW()
+			AND "status" = 'AVAILABLE'
 		`
 	},
   
 	create: async (data: Prisma.PointRecordUncheckedCreateInput) => {
 		return await prisma.pointRecord.create({data});
+	},
+
+	updateExpiredPoint: async () => {
+		return await prisma.pointRecord.updateMany({
+			where: {
+				expiresAt: {
+					lt: new Date(),
+				},
+				status: GiftStatus.AVAILABLE
+			},
+			data: {
+				status: GiftStatus.EXPIRED
+			}
+		});
 	},
 }
 

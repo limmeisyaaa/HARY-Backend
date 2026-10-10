@@ -1,5 +1,5 @@
 
-import { Prisma } from "../../generated/prisma";
+import { GiftStatus, Prisma } from "../../generated/prisma";
 
 const CouponService = {
     createReferralCouponData: (): Prisma.CouponCreateWithoutCustomerInput => {
@@ -9,6 +9,7 @@ const CouponService = {
         return {
             discountAmount: 50000,
             expiresAt: expiresAt,
+            status: GiftStatus.AVAILABLE
         };
     }
 }
