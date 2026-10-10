@@ -22,3 +22,6 @@ export const REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "1d";
 export const GOOGLE_AUTH_CLIENT_ID = process.env.GOOGLE_AUTH_CLIENT_ID || "";
 export const CLOUDINARY_URL = process.env.CLOUDINARY_URL || "";
 export const DIRECTORY_CLOUDINARY = process.env.DIRECTORY_CLOUDINARY;
+
+export const NON_ACTIVATE_COUPON=process.env.NON_ACTIVATE_COUPON || "0 0 * * *";
+export const NON_ACTIVATE_POINT=process.env.NON_ACTIVATE_POINT || "0 0 * * *";
