@@ -44,14 +44,12 @@ const AuthController = {
         ? {
             referredBy: { connect: { id: referredById } },
             coupons: { create: CouponService.createReferralCouponData() },
+            pointRecords: { create: await PointService.createPointRecord(referredById) },
           }
         : {}),
     });
 
-    if (referredById) {
-      await PointService.createPointRecord(referredById);
-    }
-
+    
     const jwtPayload = {
       id: customer.id,
       email: customer.email,

@@ -7,7 +7,7 @@ export const imageUploader = (
         "image/gif", 
         "image/png", 
         "image/webp"], 
-    maxFileSize: number = 1
+    maxFileSize: number = 5
 ) => buildUploader(allowedMimeTypes, maxFileSize);
 
 export const fileUploader = (

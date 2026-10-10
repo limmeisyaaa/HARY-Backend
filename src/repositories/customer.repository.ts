@@ -9,6 +9,7 @@ const CustomerRepository = {
 	findById: async (id: string): Promise<SafeUser | null> => {
 		return await prisma.customer.findUnique({
 			where: { id },
+			omit: { password: true },
 		});
 	},
 
@@ -25,10 +26,25 @@ const CustomerRepository = {
 			omit: { password: false },
 		});
 	},
+
+	findAuthCredentialsById: async (id: string): Promise<Customer | null> => {
+		return await prisma.customer.findUnique({
+			where: { id },
+			omit: { password: false },
+		});
+	},
   
 	create: async (data: Prisma.CustomerCreateInput) => {
 		return await prisma.customer.create({data});
 	},
+
+	editProfile: async (args: Prisma.CustomerUpdateArgs): Promise<SafeUser | null> => {
+		return await prisma.customer.update({
+			...args,
+			omit: { password: true },
+		});
+	},
+
 }
 
 export default CustomerRepository;

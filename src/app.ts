@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { APP_PORT, CLIENT_URL } from './config/env.config';
 import authRouter from './routers/auth.router';
+import customerRouter from './routers/customer.router';
 import appErrorHandler, { errorNormalizer } from './errors/app-error.handler';
 import cookieParser from 'cookie-parser';
 import cronRunner from './scheduler/runner';
@@ -24,6 +25,7 @@ app.get('/api', (_request, response) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/customer', customerRouter);
 app.use(errorNormalizer);
 app.use(appErrorHandler);
 
