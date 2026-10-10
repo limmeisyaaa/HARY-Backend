@@ -13,6 +13,8 @@ import OrganizerRepository from "../../repositories/organizer.repository";
 import { ACCESS_EXPIRES_IN, ACCESS_SECRET, REFRESH_EXPIRES_IN, REFRESH_SECRET } from "../../config/env.config";
 import { AuthPayload } from "../../interfaces/auth-payload.interface";
 import { uploadProfilePicture } from "../cloudinary/cloudinary.service";
+import CouponService from "../coupon/coupon.service";
+import PointService from "../point/point.service";
 
 const AuthController = {
   async signUpCustomer(req: Request, res: Response) {
@@ -38,9 +40,18 @@ const AuthController = {
       password: await AuthService.hashPassword(input.password),
       ...(profilePicture ? { profilePicture } : {}),
       referralCode: await AuthService.generateReferralCode(),
-      ...(referredById ? { referredBy: { connect: { id: referredById } } } : {}),
+      ...(referredById
+        ? {
+            referredBy: { connect: { id: referredById } },
+            coupons: { create: CouponService.createReferralCouponData() },
+          }
+        : {}),
     });
-    
+
+    if (referredById) {
+      await PointService.createPointRecord(referredById);
+    }
+
     const jwtPayload = {
       id: customer.id,
       email: customer.email,

@@ -5,7 +5,7 @@ import type { $ZodIssue } from "zod/v4/core";
 import AppError from "./app-error";
 
 export const errorNormalizer = (
-	error: AppError,
+	error: unknown,
 	_req: Request,
 	_res: Response,
 	next: NextFunction,
@@ -32,16 +32,21 @@ export const errorNormalizer = (
 };
 
 const appErrorHandler = (
-	error: AppError,
+	error: unknown,
 	_req: Request,
 	res: Response,
 	_next: NextFunction,
 ) => {
-	//console.table(error);
-	return res.status(error.status || 500).send({
-		status: error.status || 500,
-		message: error.message || "Internal Server Error",
-		error: error.object || null,
+	const isOperationalError = error instanceof AppError && error.isOperational;
+	if (!isOperationalError) {
+		console.error(error);
+	}
+
+	const status = isOperationalError ? error.status || 500 : 500;
+	return res.status(status).json({
+		status,
+		message: isOperationalError ? error.message || "Internal Server Error" : "Internal Server Error",
+		error: isOperationalError ? error.object || null : null,
 	});
 };
 

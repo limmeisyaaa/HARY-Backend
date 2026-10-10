@@ -42,13 +42,13 @@ model Organizer {
 }
 
 model PointRecord {
-  id        String   @id @default(uuid())
-  customerId String  @map("customer_id")
-  amount    Decimal
-  expiresAt DateTime @map("expires_at")
-  isUsed    Boolean  @default(false) @map("is_used")
-  createdAt DateTime @default(now()) @map("created_at")
-  attendee  Customer @relation(fields: [customerId], references: [id])
+  id          String    @id @default(uuid())
+  customerId  String    @map("customer_id")
+  amount      Decimal   @db.Decimal(65, 2)
+  expiresAt   DateTime  @map("expires_at")
+  isUsed      Boolean   @default(false) @map("is_used")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  customer    Customer  @relation(fields: [customerId], references: [id])
 
   @@map("point_records")
 }
@@ -56,11 +56,11 @@ model PointRecord {
 model Coupon {
   id             String       @id @default(uuid())
   customerId     String       @map("customer_id")
-  discountAmount Decimal      @map("discount_amount")
+  discountAmount Decimal      @map("discount_amount") @db.Decimal(65, 2)
   expiresAt      DateTime     @map("expires_at")
   isUsed         Boolean      @default(false) @map("is_used")
   createdAt      DateTime     @default(now()) @map("created_at")
-  attendee       Customer     @relation(fields: [customerId], references: [id])
+  customer       Customer     @relation(fields: [customerId], references: [id])
   transaction    Transaction?
 
   @@map("coupons")
@@ -92,7 +92,7 @@ model TicketType {
   id           String        @id @default(uuid())
   eventId      String        @map("event_id")
   name         String
-  price        Decimal
+  price        Decimal       @db.Decimal(65, 2)
   event        Event         @relation(fields: [eventId], references: [id])
   transactions Transaction[]
 
@@ -103,7 +103,7 @@ model Voucher {
   id             String        @id @default(uuid())
   eventId        String        @map("event_id")
   code           String
-  discountAmount Decimal       @map("discount_amount")
+  discountAmount Decimal       @map("discount_amount") @db.Decimal(65, 2)
   startDate      DateTime      @map("start_date")
   endDate        DateTime      @map("end_date")
   transactions   Transaction[]
@@ -118,10 +118,10 @@ model Transaction {
   eventId              String            @map("event_id")
   ticketTypeId         String            @map("ticket_type_id")
   quantity             Int
-  pointsUsed           Decimal           @default(0) @map("points_used")
+  pointsUsed           Decimal           @default(0) @map("points_used") @db.Decimal(65, 2)
   voucherId            String?           @map("voucher_id")
   couponId             String?           @unique @map("coupon_id")
-  totalPrice           Decimal           @map("total_price")
+  totalPrice           Decimal           @map("total_price") @db.Decimal(65, 2)
   status               TransactionStatus
   statusUpdatedBy      StatusUpdater?    @map("status_updated_by")
   paymentProofUrl      String?           @map("payment_proof_url")
@@ -130,7 +130,7 @@ model Transaction {
   confirmationDeadline DateTime?         @map("confirmation_deadline")
   createdAt            DateTime          @default(now()) @map("created_at")
   updatedAt            DateTime          @updatedAt @map("updated_at")
-  attendee             Customer          @relation(fields: [customerId], references: [id])
+  customer             Customer          @relation(fields: [customerId], references: [id])
   coupon               Coupon?           @relation(fields: [couponId], references: [id])
   event                Event             @relation(fields: [eventId], references: [id])
   ticketType           TicketType        @relation(fields: [ticketTypeId], references: [id])
@@ -146,7 +146,7 @@ model Review {
   rating     Int
   comment    String
   createdAt  DateTime @default(now()) @map("created_at")
-  attendee   Customer @relation(fields: [customerId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id])
   event      Event    @relation(fields: [eventId], references: [id])
 
   @@map("reviews")
