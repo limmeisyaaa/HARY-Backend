@@ -3,8 +3,9 @@ import AppError from "../../errors/app-error";
 import CustomerRepository from "../../repositories/customer.repository";
 import { changeOrganizerPasswordSchema, updateOrganizerProfileSchema } from "../../validators/organizer.validator";
 import OrganizerService from "./organizer.service";
+import OrganizerRepository from "../../repositories/organizer.repository";
 
-const CustomerController = {
+const OrganizerController = {
 	async updateProfile(req: Request, res: Response) {
 		const input = updateOrganizerProfileSchema.parse(req.body);
 		if (Object.keys(input).length === 0 && !req.file) {
@@ -28,18 +29,18 @@ const CustomerController = {
 		await OrganizerService.changePassword(req.auth.id, input);
 
 		res.send({
-			message: "Customer password changed successfully!",
+			message: "Organizer password changed successfully!",
 			data: null,
 		});
 	},
 
     async getPofileData(req: Request, res: Response) {
-        const customer = await CustomerRepository.findById(req.auth.id);
+        const organizer = await OrganizerRepository.findById(req.auth.id);
 
 		res.send({
-			data: customer,
+			data: organizer,
 		});
 	},
 };
 
-export default CustomerController;
+export default OrganizerController;
