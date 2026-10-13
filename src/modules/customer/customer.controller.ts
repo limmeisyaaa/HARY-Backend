@@ -5,7 +5,7 @@ import {
 	changeCustomerPasswordSchema,
 	updateCustomerProfileSchema,
 } from "../../validators/customer.validator";
-import CustomerRepository from "../../repositories/customer.repository";
+import PointRepository from "../../repositories/point.repository";
 
 const CustomerController = {
 	async updateProfile(req: Request, res: Response) {
@@ -37,7 +37,11 @@ const CustomerController = {
 	},
 
     async getPofileData(req: Request, res: Response) {
-        const customer = await CustomerRepository.findById(req.auth.id);
+        const customer = await PointRepository.findCustomerProfileWithPoints(req.auth.id);
+
+		if (!customer) {
+			throw new AppError("Customer not found!", 404);
+		}
 
 		res.send({
 			data: customer,
