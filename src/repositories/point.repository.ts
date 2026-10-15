@@ -17,13 +17,13 @@ const PointRepository = {
 	},
 
 	findAvailablePointsByCustomerId: async (customerId: string): Promise<PointRecord[] | null> => {
-		return await prisma.$queryRaw`
-			SELECT *  
-			FROM "point_records" 
-			WHERE "is_used" = false 
-			AND "customer_id" =  ${customerId}
-			AND "status" = 'AVAILABLE'
-		`
+    return await prisma.pointRecord.findMany({
+        where: {
+            customer_id: customerId,
+            is_used: false,
+            status: 'AVAILABLE'
+        }
+    	});
 	},
 
 	findCustomerProfileWithPoints: async (
