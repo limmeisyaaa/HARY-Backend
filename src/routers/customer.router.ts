@@ -9,10 +9,13 @@ const customerRouter = Router();
 customerRouter.use(verifyAccessToken, userTypeGuard("CUSTOMER"));
 
 //edit profile
-customerRouter.patch("/profile", imageUploader().single("profilePicture"), verifyEmail, CustomerController.updateProfile);
+customerRouter.patch("/profile", verifyEmail, CustomerController.updateProfile);
+
+//change profile picture
+customerRouter.patch("/profile-picture", imageUploader().single("profilePicture"), CustomerController.changeProfilePicture);
 
 //get data customer
-customerRouter.get("/profile", imageUploader().single("profilePicture"), CustomerController.getPofileData);
+customerRouter.get("/profile", CustomerController.getPofileData);
 
 //change password
 customerRouter.patch("/password", CustomerController.changePassword);

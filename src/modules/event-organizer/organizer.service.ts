@@ -6,11 +6,10 @@ import OrganizerRepository from "../../repositories/organizer.repository";
 
 const OrganizerService = {
 	updateProfile: async (
-		customerId: string,
-		input: UpdateOrganizerProfileInput,
-		profilePicture?: Express.Multer.File,
+		organizerId: string,
+		input: UpdateOrganizerProfileInput
 	) => {
-		const organizer = await OrganizerRepository.findById(customerId);
+		const organizer = await OrganizerRepository.findById(organizerId);
 		if (!organizer) throw new AppError("Customer not found!", 404);
 
 		if (input.email && input.email !== organizer.email) {
@@ -20,25 +19,39 @@ const OrganizerService = {
 			}
 		}
 
-		const profilePictureUrl = profilePicture
-			? await uploadProfilePicture(profilePicture, input.email ?? organizer.email, "ORGANIZER")
-			: undefined;
-
 		return OrganizerRepository.editProfile({
-			where: { id: customerId },
+			where: { id: organizerId },
 			data: {
 				...(input.name !== undefined ? { name: input.name } : {}),
 				...(input.email !== undefined ? { email: input.email } : {}),
+			},
+		});
+	},
+
+	changeProfilePicture: async (
+		organizerId: string,
+		profilePicture?: Express.Multer.File,
+	) => {
+		const customer = await OrganizerRepository.findById(organizerId);
+		if (!customer) throw new AppError("Customer not found!", 404);
+
+		const profilePictureUrl = profilePicture
+			? await uploadProfilePicture(profilePicture, customer.email, "ORGANIZER")
+			: undefined;
+
+		return OrganizerRepository.editProfile({
+			where: { id: organizerId },
+			data: {
 				...(profilePictureUrl ? { profilePicture: profilePictureUrl } : {}),
 			},
 		});
 	},
 
 	changePassword: async (
-		customerId: string,
+		organizerId: string,
 		input: ChangeOrganizerPasswordInput,
 	) => {
-		const customer = await OrganizerRepository.findAuthCredentialsById(customerId);
+		const customer = await OrganizerRepository.findAuthCredentialsById(organizerId);
 		if (!customer) throw new AppError("Customer not found!", 404);
 		if (!customer.password) {
 			throw new AppError("Customer does not have a password set!", 400);
@@ -55,7 +68,7 @@ const OrganizerService = {
 
 		const hashedPassword = await AuthService.hashPassword(input.newPassword);
 		return OrganizerRepository.editProfile({
-			where: { id: customerId },
+			where: { id: organizerId },
 			data: { password: hashedPassword },
 		});
 	},

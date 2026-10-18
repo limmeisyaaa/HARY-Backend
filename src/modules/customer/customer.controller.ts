@@ -10,18 +10,30 @@ import PointRepository from "../../repositories/point.repository";
 const CustomerController = {
 	async updateProfile(req: Request, res: Response) {
 		const input = updateCustomerProfileSchema.parse(req.body);
-		if (Object.keys(input).length === 0 && !req.file) {
-			throw new AppError("At least one profile field or profile picture is required!", 400);
-		}
 
 		const customer = await CustomerService.updateProfile(
 			req.auth.id,
-			input,
-			req.file,
+			input
 		);
 
 		res.send({
 			message: "Customer profile updated successfully!",
+			data: customer,
+		});
+	},
+
+	async changeProfilePicture(req: Request, res: Response){
+		if (!req.file) {
+			throw new AppError("No picture for changes!", 400);
+		}
+
+		const customer = await CustomerService.changeProfilePicture(
+			req.auth.id,
+			req.file,
+		);
+
+		res.send({
+			message: "Customer Profile picture updated successfully!",
 			data: customer,
 		});
 	},

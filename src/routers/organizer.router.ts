@@ -9,10 +9,13 @@ const organizerRouter = Router();
 organizerRouter.use(verifyAccessToken, userTypeGuard("ORGANIZER"));
 
 //edit profile
-organizerRouter.patch("/profile", imageUploader().single("profilePicture"), verifyEmail, OrganizerController.updateProfile);
+organizerRouter.patch("/profile", verifyEmail, OrganizerController.updateProfile);
+
+//change profile picture
+organizerRouter.patch("/profile-picture", imageUploader().single("profilePicture"), OrganizerController.changeProfilePicture);
 
 //get data customer
-organizerRouter.get("/profile", imageUploader().single("profilePicture"), OrganizerController.getPofileData);
+organizerRouter.get("/profile", OrganizerController.getPofileData);
 
 //change password
 organizerRouter.patch("/password", OrganizerController.changePassword);

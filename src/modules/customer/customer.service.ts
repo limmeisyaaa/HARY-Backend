@@ -10,8 +10,7 @@ import AuthService from "../auth/auth.service";
 const CustomerService = {
 	updateProfile: async (
 		customerId: string,
-		input: UpdateCustomerProfileInput,
-		profilePicture?: Express.Multer.File,
+		input: UpdateCustomerProfileInput
 	) => {
 		const customer = await CustomerRepository.findById(customerId);
 		if (!customer) throw new AppError("Customer not found!", 404);
@@ -23,15 +22,29 @@ const CustomerService = {
 			}
 		}
 
+		return CustomerRepository.editProfile({
+			where: { id: customerId },
+			data: {
+				...(input.name !== undefined ? { name: input.name } : {}),
+				...(input.email !== undefined ? { email: input.email } : {})
+			},
+		});
+	},
+
+	changeProfilePicture: async (
+		customerId: string,
+		profilePicture?: Express.Multer.File,
+	) => {
+		const customer = await CustomerRepository.findById(customerId);
+		if (!customer) throw new AppError("Customer not found!", 404);
+
 		const profilePictureUrl = profilePicture
-			? await uploadProfilePicture(profilePicture, input.email ?? customer.email, "CUSTOMER")
+			? await uploadProfilePicture(profilePicture, customer.email, "CUSTOMER")
 			: undefined;
 
 		return CustomerRepository.editProfile({
 			where: { id: customerId },
 			data: {
-				...(input.name !== undefined ? { name: input.name } : {}),
-				...(input.email !== undefined ? { email: input.email } : {}),
 				...(profilePictureUrl ? { profilePicture: profilePictureUrl } : {}),
 			},
 		});

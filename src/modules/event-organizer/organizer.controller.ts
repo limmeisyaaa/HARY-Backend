@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import AppError from "../../errors/app-error";
-import CustomerRepository from "../../repositories/customer.repository";
 import { changeOrganizerPasswordSchema, updateOrganizerProfileSchema } from "../../validators/organizer.validator";
 import OrganizerService from "./organizer.service";
 import OrganizerRepository from "../../repositories/organizer.repository";
@@ -12,15 +11,30 @@ const OrganizerController = {
 			throw new AppError("At least one profile field or profile picture is required!", 400);
 		}
 
-		const customer = await OrganizerService.updateProfile(
+		const organizer = await OrganizerService.updateProfile(
 			req.auth.id,
-			input,
-			req.file,
+			input
 		);
 
 		res.send({
 			message: "Organizer profile updated successfully!",
-			data: customer,
+			data: organizer,
+		});
+	},
+
+	async changeProfilePicture(req: Request, res: Response){
+		if (!req.file) {
+			throw new AppError("No picture for changes!", 400);
+		}
+
+		const organizer = await OrganizerService.changeProfilePicture(
+			req.auth.id,
+			req.file,
+		);
+
+		res.send({
+			message: "Organizer Profile picture updated successfully!",
+			data: organizer,
 		});
 	},
 
