@@ -1,7 +1,17 @@
 import EventRepository from "../../repositories/event.repository";
+import AppError from "../../errors/app-error";
 import { EventInputSchema } from "../../validators/event.validator";
 
 const EventService = {
+    getEventById: async (id: string) => {
+        const event = await EventRepository.findById(id);
+        if (!event) {
+            throw new AppError("Event not found!", 404);
+        }
+
+        return event;
+    },
+
     createEvent: async (organizerId: string, data: EventInputSchema) => {
         return EventRepository.create({
             organizer: {

@@ -8,6 +8,8 @@ import appErrorHandler, { errorNormalizer } from './errors/app-error.handler';
 import cookieParser from 'cookie-parser';
 import cronRunner from './scheduler/runner';
 import organizerRouter from './routers/organizer.router';
+import eventRouter from './routers/event.router';
+import transactionRouter from './routers/transaction.router';
 
 export const app = express();
 app.use(cors());
@@ -28,6 +30,8 @@ app.get('/api', (_request, response) => {
 app.use('/api/auth', authRouter);
 app.use('/api/customer', customerRouter);
 app.use('/api/organizer', organizerRouter);
+app.use('/api/events', eventRouter);
+app.use('/api/transaction', transactionRouter);
 app.use(errorNormalizer);
 app.use(appErrorHandler);
 

@@ -12,4 +12,9 @@ export const eventInputSchema = z.strictObject({
 	isFree: z.boolean()
 });
 
+export const eventIdParamsSchema = z.strictObject({
+	id: z.string().uuid("Invalid event ID. Expected a UUID."),
+});
+
 export type EventInputSchema = z.infer<typeof eventInputSchema>;
+
