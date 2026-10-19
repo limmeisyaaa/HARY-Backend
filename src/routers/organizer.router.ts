@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifyAccessToken, userTypeGuard } from "../middlewares/auth.middleware";
 import { imageUploader } from "../middlewares/uploader.middleware";
 import { verifyEmail } from "../middlewares/edit.profile.middleware";
-import OrganizerController from "../modules/event-organizer/organizer.controller";
+import OrganizerController from "../modules/organizer/organizer.controller";
 
 const organizerRouter = Router();
 
