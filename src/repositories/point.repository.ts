@@ -25,37 +25,6 @@ const PointRepository = {
         }
     	});
 	},
-
-	findCustomerProfileWithPoints: async (
-		customerId: string,
-	): Promise<CustomerProfileResponseDTO | null> => {
-		const customer = await prisma.customer.findUnique({
-			where: { id: customerId },
-			omit: { password: true },
-			include: {
-				pointRecords: {
-					where: {
-						isUsed: false,
-						status: GiftStatus.AVAILABLE,
-					},
-					select: {
-						amount: true,
-					},
-				},
-			},
-		});
-
-		if (!customer) {
-			return null;
-		}
-
-		const point = customer.pointRecords.reduce(
-			(total, record) => total + Number(record.amount),
-			0,
-		);
-
-		return new CustomerProfileResponseDTO(customer, point);
-	},
   
 	create: async (data: Prisma.PointRecordUncheckedCreateInput) => {
 		return await prisma.pointRecord.create({data});
