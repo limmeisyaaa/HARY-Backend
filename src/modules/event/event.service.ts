@@ -1,6 +1,7 @@
 import EventRepository from "../../repositories/event.repository";
 import AppError from "../../errors/app-error";
 import { EventInputSchema } from "../../validators/event.validator";
+import TransactionRepository from "../../repositories/transaction.repository";
 
 const EventService = {
     getEventById: async (id: string) => {
@@ -31,6 +32,10 @@ const EventService = {
     editEvent: async (id: string, data: EventInputSchema) => {
         return EventRepository.updateEvent(id, data);
     },
+
+    findCustomersOfEvent: async (eventId: string) => {
+        return TransactionRepository.findCustomersOfEvent(eventId);
+    }
 };
 
 export default EventService;

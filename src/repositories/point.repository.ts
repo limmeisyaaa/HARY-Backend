@@ -1,6 +1,5 @@
 import { Prisma, PointRecord, GiftStatus } from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
-import { CustomerProfileResponseDTO } from "../dtos/customer-profile.dto";
 
 const PointRepository = {
    // For public

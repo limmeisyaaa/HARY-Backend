@@ -1,3 +1,4 @@
+import { CustomersEventResponseDTO } from "../dtos/customer-event.dto";
 import { Transaction, TransactionStatus } from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
 
@@ -43,6 +44,31 @@ const TransactionRepository = {
         });
 
         return transactionData?.paymentProofUrl ?? "";
+    },
+
+    findCustomersOfEvent: async (
+            eventId: string,
+    ): Promise<CustomersEventResponseDTO[] | null> => {
+        const transactions = await prisma.transaction.findMany({
+            where: { eventId: eventId},
+            include: {
+                customer: {
+                    select: { name: true },
+                },
+                ticketType: {
+                    select: { name: true },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    
+        return transactions.map((tx) => {
+            return new CustomersEventResponseDTO(
+                tx,
+                tx.customer.name, 
+                tx.ticketType.name 
+            );
+        });    
     },
 };
 

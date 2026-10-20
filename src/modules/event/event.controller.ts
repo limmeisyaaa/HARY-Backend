@@ -9,6 +9,13 @@ const EventController = {
 
         res.send({ data: event });
     },
+
+    async getCustomersOfEvent(req: Request, res: Response) {
+        const { id } = eventIdParamsSchema.parse(req.params);
+        const customersOfEvent = await EventService.findCustomersOfEvent(id);
+
+        res.send({ data: customersOfEvent });
+    },
 };
 
 export default EventController;
