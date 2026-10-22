@@ -17,10 +17,12 @@ export const verifyAccessToken = async (
 
   if (!decoded) throw new AppError("Access token is invalid or expired!", 401);
 
-  //Make sure if userType is ORGANIZER, role must be present in the token
+  //Make sure if userType is ORGANIZER, role and org name must be present in the token
   const payload = decoded as AuthPayload;
   if(payload.userType === "ORGANIZER" && !payload.role) {
     throw new AppError("Organizer role is missing in the token!", 401);
+  } else if(payload.userType === "ORGANIZER" && !payload.eventOrganizerName) {
+    throw new AppError("Event Organizer Name is missing in the token!", 401);
   }
 
   req.auth = payload;

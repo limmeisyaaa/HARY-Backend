@@ -11,13 +11,14 @@ export interface AuthCustomerPayload {
 export interface AuthOrganizerPayload {
 	id: string;
 	email: string;
+	eventOrganizerName: string;
 	userType: "ORGANIZER";
 	role: OrganizerRole;
 	iat?: number;
 	exp?: number;
 }
 
-export type AuthPayload = AuthCustomerPayload | AuthOrganizerPayload;
+export type AuthPayload = AuthOrganizerPayload | AuthCustomerPayload;
 
 declare global {
 	namespace Express {

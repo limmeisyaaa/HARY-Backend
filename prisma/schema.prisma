@@ -28,15 +28,16 @@ model Customer {
 }
 
 model Organizer {
-  id             String        @id @default(uuid())
-  name           String
-  email          String        @unique
-  password       String
-  profilePicture String?       @map("profile_picture")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  role           OrganizerRole @default(ADMIN)
-  events         Event[]
+  id                  String        @id @default(uuid())
+  name                String
+  email               String        @unique
+  password            String
+  eventOrganizerName  String         //From aplication owner (get from company of organizer), make for know if the organizer from same organizer
+  profilePicture      String?       @map("profile_picture")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  role                OrganizerRole @default(ADMIN)
+  events              Event[]
 
   @@map("organizers")
 }
@@ -69,23 +70,24 @@ model Coupon {
 }
 
 model Event {
-  id             String        @id @default(uuid())
-  organizerId    String        @map("organizer_id")
-  name           String
-  description    String
-  category       String
-  location       String
-  startDate      DateTime      @map("start_date")
-  endDate        DateTime      @map("end_date")
-  availableSeats Int           @map("available_seats")
-  isFree         Boolean       @default(false) @map("is_free")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  organizer      Organizer     @relation(fields: [organizerId], references: [id])
-  reviews        Review[]
-  ticketTypes    TicketType[]
-  transactions   Transaction[]
-  vouchers       Voucher[]
+  id                    String        @id @default(uuid())
+  organizerId           String        @map("organizer_id")
+  eventOrganizerName    String
+  name                  String
+  description           String
+  category              String
+  location              String
+  startDate             DateTime      @map("start_date")
+  endDate               DateTime      @map("end_date")
+  availableSeats        Int           @map("available_seats")
+  isFree                Boolean       @default(false) @map("is_free")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  organizer             Organizer     @relation(fields: [organizerId], references: [id])
+  reviews               Review[]
+  ticketTypes           TicketType[]
+  transactions          Transaction[]
+  vouchers              Voucher[]
 
   @@map("events")
 }

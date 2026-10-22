@@ -9,6 +9,21 @@ const EventRepository = {
         });
     },
 
+    findByIdForUpdate: async (id: string) => {
+        return await prisma.event.findUnique({
+            where: { id },
+            include: {
+                organizer: {
+                    select: { eventOrganizerName: true },
+                },
+                ticketTypes: true,
+                _count: {
+                    select: { transactions: true },
+                },
+            },
+        });
+    },
+
     findAllActiveEvent: async (): Promise<Event[] | null> => {
         return await prisma.event.findMany({
             where: { endDate: new Date },
@@ -22,6 +37,12 @@ const EventRepository = {
     findByOrganizerId: async (organizerId: string): Promise<Event[] | null> => {
         return await prisma.event.findMany({
             where: { organizerId: organizerId },
+        });
+    },
+
+    findAllEventByOrganizerName: async (eventOrganizerName: string): Promise<Event[] | null> => {
+        return await prisma.event.findMany({
+            where: { eventOrganizerName: eventOrganizerName },
         });
     },
 

@@ -89,6 +89,7 @@ const AuthController = {
 
     const organizer = await OrganizerRepository.create({
       name: input.name,
+      eventOrganizerName: input.eventOrganizerName,
       email: input.email,
       password: await AuthService.hashPassword(input.password),
       ...(profilePicture ? { profilePicture } : {}),
@@ -98,6 +99,7 @@ const AuthController = {
     const jwtPayload = {
       id: organizer.id,
       email: organizer.email,
+      eventOrganizerName: organizer.eventOrganizerName,
       userType: input.userType,
       role: organizer.role,
     };
@@ -177,6 +179,7 @@ const AuthController = {
     const jwtPayload ={
       id: organizer.id,
       email: organizer.email,
+      eventOrganizerName: organizer.eventOrganizerName,
       userType: input.userType,
       role: organizer.role,
     };

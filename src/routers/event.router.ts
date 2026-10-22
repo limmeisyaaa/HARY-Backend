@@ -1,17 +1,40 @@
 import { Router } from "express";
 import EventController from "../modules/event/event.controller";
-import { roleGuard, verifyAccessToken } from "../middlewares/auth.middleware";
+import { roleGuard, userTypeGuard, verifyAccessToken } from "../middlewares/auth.middleware";
 
 const eventRouter = Router();
 
 //Guest accessable
 eventRouter.get("/:id", EventController.getEventById);
+eventRouter.get("/all-event/:id", EventController.getAllEvent);
+
+//Organizer event management
+eventRouter.post(
+    "/event",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.createEvent
+);
+
+eventRouter.patch(
+    "/event",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.updateEvent
+);
 
 eventRouter.get(
-    "/customer-event/:id", 
+    "/event/:id", 
     verifyAccessToken, 
     roleGuard("ADMIN", "SUPER_ADMIN"), 
     EventController.getCustomersOfEvent
+);
+
+eventRouter.get(
+    "/organizer/all-event", 
+    verifyAccessToken, 
+    roleGuard("ADMIN", "SUPER_ADMIN"), 
+    EventController.getAllEventByOrganizerName
 );
 
 export default eventRouter;
