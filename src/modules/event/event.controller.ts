@@ -35,7 +35,7 @@ const EventController = {
 
     async getCustomersOfEvent(req: Request, res: Response) {
         const { id } = eventIdParamsSchema.parse(req.params);
-        const customersOfEvent = await EventService.findCustomersOfEvent(id);
+        const customersOfEvent = await EventService.findCustomersOfEvent(id, req.auth.eventOrganizerName);
 
         res.send({ data: customersOfEvent });
     },

@@ -41,7 +41,7 @@ const EventService = {
         if (!event) throw new AppError("Event not found!", 404);
 
         if (event.eventOrganizerName !== organisationName)
-            throw new AppError("You are not in organisation that make event, you not allowed to update this event!", 403);
+            throw new AppError("You are not in organisation that make event, you are not allowed to update this event!", 403);
 
         const sortTicketTypes = (ticketTypes: { name: string; price: number }[]) =>
             [...ticketTypes].sort((left, right) =>
@@ -79,7 +79,11 @@ const EventService = {
         });
     },
 
-    findCustomersOfEvent: async (eventId: string) => {
+    findCustomersOfEvent: async (eventId: string, organisationName: string) => {
+        const event = await EventRepository.findById(eventId);
+        if (event?.eventOrganizerName !== organisationName) 
+            throw new AppError("You are not in organisation that make event, you are not allowed to access this event!", 403);
+    
         return TransactionRepository.findCustomersOfEvent(eventId);
     }
 };
