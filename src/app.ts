@@ -10,9 +10,10 @@ import cronRunner from './scheduler/runner';
 import organizerRouter from './routers/organizer.router';
 import eventRouter from './routers/event.router';
 import transactionRouter from './routers/transaction.router';
+import VoucherRouter from './routers/voucher.router';
 
 export const app = express();
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 app.use(cookieParser()); 
 app.use(
@@ -32,6 +33,7 @@ app.use('/api/customer', customerRouter);
 app.use('/api/organizer', organizerRouter);
 app.use('/api/events', eventRouter);
 app.use('/api/transaction', transactionRouter);
+app.use('/api/voucher', VoucherRouter);
 app.use(errorNormalizer);
 app.use(appErrorHandler);
 

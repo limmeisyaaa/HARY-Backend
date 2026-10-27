@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { eventIdParamsSchema, eventInputSchema } from "../../validators/event.validator";
+import { eventIdParamsSchema, eventInputSchema, eventPaginationQuerySchema } from "../../validators/event.validator";
 import EventService from "./event.service";
 import EventRepository from "../../repositories/event.repository";
 
@@ -41,9 +41,13 @@ const EventController = {
     },
 
     async getAllEventByOrganizerName(req: Request, res: Response) {
-        const customersOfEvent = await EventRepository.findAllEventByOrganizerName(req.auth.eventOrganizerName);
+        const query = eventPaginationQuerySchema.parse(req.query);
+        const events = await EventService.getEventsPaginated(
+            { eventOrganizerName: req.auth.eventOrganizerName },
+            query
+        );
 
-        res.send({ data: customersOfEvent });
+        res.send({ message: "Events retrieved successfully!", data: events });
     },
 };
 

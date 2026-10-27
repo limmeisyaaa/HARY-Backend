@@ -34,4 +34,10 @@ export const eventIdParamsSchema = z.strictObject({
 	id: z.string().uuid("Invalid event ID. Expected a UUID."),
 });
 
+export const eventPaginationQuerySchema = z.strictObject({
+	limit: z.coerce.number().int().min(1, "Limit minimum 1!").max(50, "Limit maximum 50!").default(12),
+	cursor: z.string().uuid("Invalid cursor. Expected a UUID.").optional(),
+});
+
 export type EventInputSchema = z.infer<typeof eventInputSchema>;
+export type EventPaginationQuerySchema = z.infer<typeof eventPaginationQuerySchema>;

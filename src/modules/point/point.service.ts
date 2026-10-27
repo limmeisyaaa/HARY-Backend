@@ -1,6 +1,6 @@
-import { PointRecord } from "@prisma/client";
+// import { PointRecord } from "@prisma/client";
 import PointRepository from "../../repositories/point.repository";
-import { GiftStatus } from "../../generated/prisma";
+import { GiftStatus, PointRecord } from "../../generated/prisma";
 
 const PointService = {
     createPointRecord: async (customerId: string): Promise<PointRecord> => {

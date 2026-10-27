@@ -1,6 +1,7 @@
 import EventRepository from "../../repositories/event.repository";
 import AppError from "../../errors/app-error";
-import { EventInputSchema } from "../../validators/event.validator";
+import { EventInputSchema, EventPaginationQuerySchema } from "../../validators/event.validator";
+import { Prisma } from "../../generated/prisma";
 import TransactionRepository from "../../repositories/transaction.repository";
 
 const EventService = {
@@ -85,6 +86,41 @@ const EventService = {
             throw new AppError("You are not in organisation that make event, you are not allowed to access this event!", 403);
     
         return TransactionRepository.findCustomersOfEvent(eventId);
+    },
+
+    // Dipakai bersama untuk list organizer dan list public (beda di filter where saja)
+    getEventsPaginated: async (where: Prisma.EventWhereInput, { limit, cursor }: EventPaginationQuerySchema) => {
+        const events = await EventRepository.findEventsPaginated(where, limit, cursor);
+
+        const hasMore = events.length > limit;
+        const pageEvents = hasMore ? events.slice(0, limit) : events;
+        const nextCursor = hasMore ? pageEvents[pageEvents.length - 1].id : null;
+
+        const items = pageEvents.map(({ vouchers, ...event }) => {
+            // Event gratis atau tanpa tiket dianggap harga 0
+            const lowestPrice = event.isFree || event.ticketTypes.length === 0
+                ? 0
+                : Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)));
+
+            // Voucher aktif dengan diskon terbesar
+            const best = vouchers.reduce<(typeof vouchers)[number] | null>(
+                (top, voucher) =>
+                    !top || Number(voucher.discountAmount) > Number(top.discountAmount) ? voucher : top,
+                null
+            );
+            const bestVoucher = best
+                ? {
+                      id: best.id,
+                      code: best.code,
+                      discountAmount: Number(best.discountAmount),
+                      endDate: best.endDate,
+                  }
+                : null;
+
+            return { ...event, lowestPrice, bestVoucher };
+        });
+
+        return { items, nextCursor };
     }
 };
 
