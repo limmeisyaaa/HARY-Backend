@@ -77,6 +77,7 @@ model Event {
   description           String
   category              String
   location              String
+  eventPicture          String?         @map("event_picture")
   startDate             DateTime      @map("start_date")
   endDate               DateTime      @map("end_date")
   availableSeats        Int           @map("available_seats")
