@@ -29,3 +29,31 @@ export const uploadProfilePicture = async (
 
   return result.secure_url;
 };
+
+export const uploadEventPicture = async (
+  file: Express.Multer.File, 
+  orgName: string, 
+  userType: string
+): Promise<string> => {
+  if (!file) {
+    throw new AppError("No file provided!", 400);
+  }
+
+  let fileSource: string;
+  
+  if (file.buffer) {
+    const base64Data = file.buffer.toString("base64");
+    fileSource = `data:${file.mimetype};base64,${base64Data}`;
+  } else if (file.path) {
+    fileSource = file.path;
+  } else {
+    throw new Error("Format file tidak valid.");
+  }
+
+  const result = await cloudinary.uploader.upload(fileSource, {
+    folder: `${DIRECTORY_CLOUDINARY}/event_pictures/${userType.toLowerCase()}/${orgName}`,
+    resource_type: "image"
+  });
+
+  return result.secure_url;
+};

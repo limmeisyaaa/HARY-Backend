@@ -1,6 +1,7 @@
 import { Router } from "express";
 import EventController from "../modules/event/event.controller";
 import { roleGuard, userTypeGuard, verifyAccessToken } from "../middlewares/auth.middleware";
+import { imageUploader } from "../middlewares/uploader.middleware";
 
 const eventRouter = Router();
 
@@ -13,6 +14,7 @@ eventRouter.post(
     "/event",
     verifyAccessToken,
     userTypeGuard("ORGANIZER"),
+    imageUploader().single("eventPicture"),
     EventController.createEvent
 );
 

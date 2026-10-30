@@ -16,7 +16,7 @@ export const organizerSignUpSchema = z.strictObject({
   email: z.string().email("Invalid email format!"),
   eventOrganizerName: z.string().regex(/^\S+$/, "Event organizer name cannot contain spaces!"),
   password: z.string().min(6, "Password must be at least 6 characters long!"),
-  role: z.enum(organizerRoles, { message: "Invalid organizer role!" }).optional(), // Opsional tidak ada role automatis default ke "ADMIN"
+  role: z.enum(organizerRoles, { message: "Invalid organizer role! Roles either ADMIN or SUPER_ADMIN." }).optional(), // Opsional tidak ada role automatis default ke "ADMIN"
   userType: z.literal("ORGANIZER"), // Hanya bisa mendaftar sebagai ORGANIZER
 });
 
