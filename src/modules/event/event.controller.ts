@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { eventIdParamsSchema, eventInputSchema, eventPaginationQuerySchema } from "../../validators/event.validator";
 import EventService from "./event.service";
-import EventRepository from "../../repositories/event.repository";
 
 const EventController = {
     //General withot login
@@ -13,9 +12,14 @@ const EventController = {
     },
 
     async getAllEvent(req: Request, res: Response) {
-        const event = await EventRepository.findAllActiveEvent();
+        const query = eventPaginationQuerySchema.parse(req.query);
+        // Public hanya melihat event yang belum selesai
+        const events = await EventService.getEventsPaginated(
+            { endDate: { gt: new Date() } },
+            query
+        );
 
-        res.send({ data: event });
+        res.send({ message: "Events retrieved successfully!", data: events });
     },
 
     //Login required

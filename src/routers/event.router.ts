@@ -5,8 +5,8 @@ import { roleGuard, userTypeGuard, verifyAccessToken } from "../middlewares/auth
 const eventRouter = Router();
 
 //Guest accessable
-eventRouter.get("/:id", EventController.getEventById);
-eventRouter.get("/all-event/:id", EventController.getAllEvent);
+eventRouter.get("/find-event/:id", EventController.getEventById);
+eventRouter.get("/all-event", EventController.getAllEvent);
 
 //Organizer event management
 eventRouter.post(
