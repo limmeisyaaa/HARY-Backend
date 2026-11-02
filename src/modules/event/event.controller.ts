@@ -39,7 +39,7 @@ const EventController = {
 
     async updateEvent(req: Request, res: Response) {
         const input = eventInputSchema.parse(req.body);
-        const event = await EventService.editEvent(req.auth.eventOrganizerName, input);
+        const event = await EventService.editEvent(req.auth.eventOrganizerName, input, req.file);
 
         res.send({ data: event });
     },

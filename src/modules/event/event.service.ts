@@ -3,14 +3,34 @@ import AppError from "../../errors/app-error";
 import { EventInputSchema, EventPaginationQuerySchema } from "../../validators/event.validator";
 import TransactionRepository from "../../repositories/transaction.repository";
 import { Prisma } from "../../generated/prisma";
+import { uploadEventPicture } from "../cloudinary/cloudinary.service";
 
 const EventService = {
     getEventsPaginated: async (
         where: Prisma.EventWhereInput,
         query: EventPaginationQuerySchema
     ) => {
+        // Gabungkan filter dasar (public/organizer) dengan filter pencarian dari query
+        const filters: Prisma.EventWhereInput[] = [where];
+        if (query.search) {
+            filters.push({
+                OR: [
+                    { name: { contains: query.search, mode: "insensitive" } },
+                    { description: { contains: query.search, mode: "insensitive" } },
+                    { eventOrganizerName: { contains: query.search, mode: "insensitive" } },
+                ],
+            });
+        }
+        // Event yang berlangsung (overlap) di dalam rentang tanggal, dihitung per hari WIB
+        if (query.from && query.to) {
+            filters.push({
+                startDate: { lte: new Date(`${query.to}T23:59:59.999+07:00`) },
+                endDate: { gte: new Date(`${query.from}T00:00:00+07:00`) },
+            });
+        }
+
         const fetchedEvents = await EventRepository.findEventsPaginated(
-            where,
+            { AND: filters },
             query.limit,
             query.cursor
         );
@@ -19,7 +39,7 @@ const EventService = {
             ? fetchedEvents.slice(0, query.limit)
             : fetchedEvents;
         return {
-            events: pageEvents,
+            items: pageEvents,
             hasNextPage,
             nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,
         };
@@ -60,7 +80,7 @@ const EventService = {
         });
     },
 
-    editEvent: async (organisationName: string, data: EventInputSchema) => {
+    editEvent: async (organisationName: string, data: EventInputSchema, eventPicture?: Express.Multer.File) => {
         if (!data.id) throw new AppError("Id event missing for edit event!", 400);
         const eventId = data.id;
 
@@ -85,7 +105,13 @@ const EventService = {
             throw new AppError("Ticket types cannot be changed after transactions exist!", 409);
         }
 
+        // Upload gambar baru hanya setelah lolos cek kepemilikan event
+        const eventPictureUrl = eventPicture
+            ? await uploadEventPicture(eventPicture, organisationName, "ORGANIZER")
+            : undefined;
+
         return EventRepository.updateEvent(eventId, {
+            ...(eventPictureUrl ? { eventPicture: eventPictureUrl } : {}),
             name: data.name,
             eventOrganizerName: event.organizer.eventOrganizerName,
             description: data.description,

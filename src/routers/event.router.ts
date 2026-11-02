@@ -22,6 +22,7 @@ eventRouter.patch(
     "/event",
     verifyAccessToken,
     userTypeGuard("ORGANIZER"),
+    imageUploader().single("eventPicture"),
     EventController.updateEvent
 );
 
