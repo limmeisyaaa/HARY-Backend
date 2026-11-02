@@ -16,7 +16,7 @@ const TransactionController = {
     async transactionApproval(req: Request, res: Response){
         const data = transactionUpdateStatusSchema.parse(req.body);
         res.send({
-			message: `Success to change transaction status to ${data.status}!`,
+			message: `Success to change transaction status of ${data.id} to ${data.status}!`,
 			data: TransactionService.updateStatusTransaction(data),
 		});
     },

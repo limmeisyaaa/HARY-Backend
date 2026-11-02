@@ -1,5 +1,5 @@
 import { CustomersEventResponseDTO } from "../dtos/customer-event.dto";
-import { Transaction, TransactionStatus } from "../generated/prisma";
+import { OrganizerRole, StatusUpdater, Transaction, TransactionStatus } from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
 
 const TransactionRepository = {
@@ -27,13 +27,24 @@ const TransactionRepository = {
         });
     },
 
+    countTransactionsByEventIds: async (eventIds: string[]) => {
+        if (eventIds.length === 0) return [];
+
+        return prisma.transaction.groupBy({
+            by: ["eventId", "status"],
+            where: { eventId: { in: eventIds } },
+            _count: { _all: true },
+        });
+    },
+
     updateTransactionStatus: async( id: string, status: TransactionStatus ) => {
         return await prisma.transaction.update({
             where: {
                 id: id,
             },
             data: {
-                status: status
+                status: status,
+                statusUpdatedBy: StatusUpdater.ORGANIZER,
             },
         });
     },
@@ -66,7 +77,7 @@ const TransactionRepository = {
             return new CustomersEventResponseDTO(
                 tx,
                 tx.customer.name, 
-                tx.ticketType.name 
+                tx.ticketType.name
             );
         });    
     },

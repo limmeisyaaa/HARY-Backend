@@ -2,7 +2,7 @@ import EventRepository from "../../repositories/event.repository";
 import AppError from "../../errors/app-error";
 import { EventInputSchema, EventPaginationQuerySchema } from "../../validators/event.validator";
 import TransactionRepository from "../../repositories/transaction.repository";
-import { Prisma } from "../../generated/prisma";
+import { Prisma, TransactionStatus } from "../../generated/prisma";
 
 const EventService = {
     getEventsPaginated: async (
@@ -19,6 +19,87 @@ const EventService = {
             : fetchedEvents;
         return {
             events: pageEvents,
+            eventTotal,
+            hasNextPage,
+            nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,
+        };
+    },
+
+    getEventsWithTransactionSummary: async (
+        where: Prisma.EventWhereInput,
+        query: EventPaginationQuerySchema
+    ) => {
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findEventsPaginated(where, query.limit, query.cursor),
+            EventRepository.countEvents(where),
+        ]);
+        const hasNextPage = fetchedEvents.length > query.limit;
+        const pageEvents = hasNextPage
+            ? fetchedEvents.slice(0, query.limit)
+            : fetchedEvents;
+        const transactionCounts = await TransactionRepository.countTransactionsByEventIds(
+            pageEvents.map(({ id }) => id)
+        );
+        const transactionCountsByEvent = new Map<
+            string,
+            { total: number; pending: number; done: number, expired: number; cancelled: number; rejected: number }
+        >();
+
+        for (const { eventId, status, _count } of transactionCounts) {
+            const counts = transactionCountsByEvent.get(eventId) ?? {
+                total: 0,
+                pending: 0,
+                done: 0,
+                expired: 0,
+                cancelled: 0,
+                rejected: 0
+            };
+            const count = _count._all;
+
+            counts.total += count;
+            if (
+                status === TransactionStatus.WAITING_PAYMENT ||
+                status === TransactionStatus.WAITING_CONFIRMATION
+            ) {
+                counts.pending += count;
+            } else if (status === TransactionStatus.DONE) {
+                counts.done += count;
+            } else if (status === TransactionStatus.EXPIRED ) {
+                counts.expired += count;
+            } else if (status === TransactionStatus.CANCELED ) {
+                counts.cancelled += count;
+            } else if (status === TransactionStatus.REJECTED ) {
+                counts.rejected += count;
+            } 
+
+            transactionCountsByEvent.set(eventId, counts);
+        }
+
+        return {
+            events: pageEvents.map((event) => {
+                const counts = transactionCountsByEvent.get(event.id) ?? {
+                    total: 0,
+                    pending: 0,
+                    done: 0,
+                    expired: 0,
+                    cancelled: 0,
+                    rejected: 0
+                };
+
+                return {
+                    eventId: event.id,
+                    eventName: event.name,
+                    start_date: event.startDate,
+                    end_date: event.endDate,
+                    availableSeats: event.availableSeats,
+                    totalTransaction: counts.total,
+                    pendingTransaction: counts.pending,
+                    doneTransaction: counts.done,
+                    expiredTransaction: counts.expired,
+                    cancelledTransaction: counts.cancelled,
+                    rejectedTransaction: counts.rejected,
+                };
+            }),
             eventTotal,
             hasNextPage,
             nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,

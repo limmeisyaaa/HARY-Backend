@@ -40,4 +40,11 @@ eventRouter.get(
     EventController.getAllEventByOrganizerName
 );
 
+eventRouter.get(
+    "/organizer/all-event/transaction-summary",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.getAllEventWithTransactionSummary
+);
+
 export default eventRouter;

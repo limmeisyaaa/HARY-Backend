@@ -91,6 +91,16 @@ const EventController = {
 
         res.send({ message: "Events retrieved successfully!", data: events });
     },
+
+    async getAllEventWithTransactionSummary(req: Request, res: Response) {
+        const query = eventPaginationQuerySchema.parse(req.query);
+        const events = await EventService.getEventsWithTransactionSummary(
+            { eventOrganizerName: req.auth.eventOrganizerName },
+            query
+        );
+
+        res.send({ message: "Transaction summaries retrieved successfully!", data: events });
+    },
 };
 
 export default EventController;

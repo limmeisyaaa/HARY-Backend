@@ -6,9 +6,9 @@ const transactionRouter = Router();
 
 transactionRouter.use(verifyAccessToken);
 
-transactionRouter.get("/:id", roleGuard("ADMIN", "SUPER_ADMIN"), TransactionController.viewTransactionProof);
+transactionRouter.get("/organizer/:id", roleGuard("ADMIN", "SUPER_ADMIN"), TransactionController.viewTransactionProof);
 
-transactionRouter.patch("/transaction-status", roleGuard("SUPER_ADMIN"), TransactionController.transactionApproval);
+transactionRouter.patch("/status", roleGuard("SUPER_ADMIN"), TransactionController.transactionApproval);
 
 
 export default transactionRouter;
