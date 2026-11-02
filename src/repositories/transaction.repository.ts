@@ -57,12 +57,7 @@ const TransactionRepository = {
 
             const statusChanged = transaction.status !== status;
 
-            if (statusChanged && status === TransactionStatus.DONE) {
-                await tx.event.update({
-                    where: { id: transaction.eventId },
-                    data: { availableSeats: { decrement: 1 } },
-                });
-            } else if (statusChanged && status === TransactionStatus.REJECTED) {
+            if (statusChanged && status === TransactionStatus.REJECTED) {
                 await tx.event.update({
                     where: { id: transaction.eventId },
                     data: { availableSeats: { increment: 1 } },
