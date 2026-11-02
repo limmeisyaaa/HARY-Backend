@@ -1,5 +1,5 @@
 import { CustomersEventResponseDTO } from "../dtos/customer-event.dto";
-import { OrganizerRole, StatusUpdater, Transaction, TransactionStatus } from "../generated/prisma";
+import { GiftStatus, StatusUpdater, Transaction, TransactionStatus } from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
 
 const TransactionRepository = {
@@ -37,15 +37,75 @@ const TransactionRepository = {
         });
     },
 
-    updateTransactionStatus: async( id: string, status: TransactionStatus ) => {
-        return await prisma.transaction.update({
-            where: {
-                id: id,
-            },
-            data: {
-                status: status,
-                statusUpdatedBy: StatusUpdater.ORGANIZER,
-            },
+    updateTransactionStatus: async (id: string, status: TransactionStatus) => {
+        return prisma.$transaction(async (tx) => {
+            const transaction = await tx.transaction.findUnique({
+                where: { id },
+                select: {
+                    status: true,
+                    eventId: true,
+                    customerId: true,
+                    pointsUsed: true,
+                    voucherId: true,
+                    couponId: true,
+                },
+            });
+
+            if (!transaction) {
+                throw new Error(`Transaction with id ${id} not found`);
+            }
+
+            const statusChanged = transaction.status !== status;
+
+            if (statusChanged && status === TransactionStatus.DONE) {
+                await tx.event.update({
+                    where: { id: transaction.eventId },
+                    data: { availableSeats: { decrement: 1 } },
+                });
+            } else if (statusChanged && status === TransactionStatus.REJECTED) {
+                await tx.event.update({
+                    where: { id: transaction.eventId },
+                    data: { availableSeats: { increment: 1 } },
+                });
+
+                if (transaction.pointsUsed.greaterThan(0)) {
+                    await tx.pointRecord.updateMany({
+                        where: {
+                            customerId: transaction.customerId,
+                            isUsed: true,
+                        },
+                        data: {
+                            isUsed: false,
+                            status: GiftStatus.AVAILABLE,
+                        },
+                    });
+                }
+
+                if (transaction.voucherId) {
+                    await tx.voucher.update({
+                        where: { id: transaction.voucherId },
+                        data: { status: GiftStatus.AVAILABLE },
+                    });
+                }
+
+                if (transaction.couponId) {
+                    await tx.coupon.update({
+                        where: { id: transaction.couponId },
+                        data: {
+                            isUsed: false,
+                            status: GiftStatus.AVAILABLE,
+                        },
+                    });
+                }
+            }
+
+            return tx.transaction.update({
+                where: { id },
+                data: {
+                    status,
+                    statusUpdatedBy: StatusUpdater.ORGANIZER,
+                },
+            });
         });
     },
 
