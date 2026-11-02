@@ -3,6 +3,35 @@ import { eventIdParamsSchema, eventInputSchema, eventPaginationQuerySchema } fro
 import EventService from "./event.service";
 import EventRepository from "../../repositories/event.repository";
 import { uploadEventPicture } from "../cloudinary/cloudinary.service";
+import AppError from "../../errors/app-error";
+
+const parseEventInput = (body: unknown) => {
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+        return eventInputSchema.parse(body);
+    }
+
+    const normalizedBody: Record<string, unknown> = { ...body };
+
+    if (typeof normalizedBody.availableSeats === "string") {
+        normalizedBody.availableSeats = Number(normalizedBody.availableSeats);
+    }
+
+    if (normalizedBody.isFree === "true") {
+        normalizedBody.isFree = true;
+    } else if (normalizedBody.isFree === "false") {
+        normalizedBody.isFree = false;
+    }
+
+    if (typeof normalizedBody.ticketTypes === "string") {
+        try {
+            normalizedBody.ticketTypes = JSON.parse(normalizedBody.ticketTypes);
+        } catch (error) {
+            throw new AppError("ticketTypes must contain valid JSON!", 400, error);
+        }
+    }
+
+    return eventInputSchema.parse(normalizedBody);
+};
 
 const EventController = {
     //General withot login
@@ -21,7 +50,7 @@ const EventController = {
 
     //Login required
     async createEvent(req: Request, res: Response) {
-        const input = eventInputSchema.parse(req.body);
+        const input = parseEventInput(req.body);
 
         const eventPictureUrl = req.file
               ? await uploadEventPicture(req.file, req.auth.eventOrganizerName, req.auth.userType)
@@ -33,8 +62,15 @@ const EventController = {
     },
 
     async updateEvent(req: Request, res: Response) {
-        const input = eventInputSchema.parse(req.body);
-        const event = await EventService.editEvent(req.auth.eventOrganizerName, input);
+        const input = parseEventInput(req.body);
+        const eventPictureUrl = req.file
+            ? await uploadEventPicture(req.file, req.auth.eventOrganizerName, req.auth.userType)
+            : undefined;
+        const event = await EventService.editEvent(
+            req.auth.eventOrganizerName,
+            input,
+            eventPictureUrl
+        );
 
         res.send({ data: event });
     },

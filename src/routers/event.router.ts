@@ -19,23 +19,24 @@ eventRouter.post(
 );
 
 eventRouter.patch(
-    "/event",
+    "/organizer/edit-event",
     verifyAccessToken,
     userTypeGuard("ORGANIZER"),
+    imageUploader().single("eventPicture"),
     EventController.updateEvent
 );
 
 eventRouter.get(
     "/event/:id", 
     verifyAccessToken, 
-    roleGuard("ADMIN", "SUPER_ADMIN"), 
+    userTypeGuard("ORGANIZER"),
     EventController.getCustomersOfEvent
 );
 
 eventRouter.get(
     "/organizer/all-event", 
     verifyAccessToken, 
-    roleGuard("ADMIN", "SUPER_ADMIN"), 
+    userTypeGuard("ORGANIZER"),
     EventController.getAllEventByOrganizerName
 );
 

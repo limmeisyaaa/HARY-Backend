@@ -9,17 +9,17 @@ const EventService = {
         where: Prisma.EventWhereInput,
         query: EventPaginationQuerySchema
     ) => {
-        const fetchedEvents = await EventRepository.findEventsPaginated(
-            where,
-            query.limit,
-            query.cursor
-        );
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findEventsPaginated(where, query.limit, query.cursor),
+            EventRepository.countEvents(where),
+        ]);
         const hasNextPage = fetchedEvents.length > query.limit;
         const pageEvents = hasNextPage
             ? fetchedEvents.slice(0, query.limit)
             : fetchedEvents;
         return {
             events: pageEvents,
+            eventTotal,
             hasNextPage,
             nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,
         };
@@ -60,7 +60,11 @@ const EventService = {
         });
     },
 
-    editEvent: async (organisationName: string, data: EventInputSchema) => {
+    editEvent: async (
+        organisationName: string,
+        data: EventInputSchema,
+        eventPictureUrl?: string
+    ) => {
         if (!data.id) throw new AppError("Id event missing for edit event!", 400);
         const eventId = data.id;
 
@@ -95,6 +99,7 @@ const EventService = {
             endDate: new Date(data.endDate),
             availableSeats: data.availableSeats,
             isFree: data.isFree,
+            ...(eventPictureUrl ? { eventPicture: eventPictureUrl } : {}),
             ...(ticketTypesChanged
                 ? {
                       ticketTypes: {

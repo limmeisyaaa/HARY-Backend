@@ -71,6 +71,10 @@ const EventRepository = {
         });
     },
 
+    countEvents: async (where: Prisma.EventWhereInput): Promise<number> => {
+        return await prisma.event.count({ where });
+    },
+
     findActiveEventByOrganizerId: async (organizerId: string): Promise<Event[] | null> => {
         return await prisma.event.findMany({
             where: { 
