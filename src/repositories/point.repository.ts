@@ -18,10 +18,16 @@ const PointRepository = {
 	findAvailablePointsByCustomerId: async (customerId: string): Promise<PointRecord[] | null> => {
     return await prisma.pointRecord.findMany({
         where: {
-            customer_id: customerId,
-            is_used: false,
-            status: 'AVAILABLE'
-        }
+            customerId,
+            isUsed: false,
+            status: 'AVAILABLE',
+			expiresAt: {
+				gt: new Date()
+			}
+        },
+		orderBy: {
+			expiresAt: "asc"
+		}
     	});
 	},
   
