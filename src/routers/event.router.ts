@@ -6,8 +6,10 @@ import { imageUploader } from "../middlewares/uploader.middleware";
 const eventRouter = Router();
 
 //Guest accessable
-eventRouter.get("/:id", EventController.getEventById);
-eventRouter.get("/all-event/:id", EventController.getAllEvent);
+eventRouter.get("/all-event", EventController.getAllEvent);
+
+//Customer accessable
+eventRouter.get("/:id", verifyAccessToken, EventController.getEventById);
 
 //Organizer event management
 eventRouter.post(

@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { eventIdParamsSchema, eventInputSchema, eventPaginationQuerySchema } from "../../validators/event.validator";
 import EventService from "./event.service";
-import EventRepository from "../../repositories/event.repository";
 import { uploadEventPicture } from "../cloudinary/cloudinary.service";
 import AppError from "../../errors/app-error";
 
@@ -43,9 +42,17 @@ const EventController = {
     },
 
     async getAllEvent(req: Request, res: Response) {
-        const event = await EventRepository.findAllActiveEvent();
+        const query = eventPaginationQuerySchema.parse(req.query);
+        const result = await EventService.getActiveEventsPaginated(query);
 
-        res.send({ data: event });
+        res.send({
+            data: result.events,
+            pagination: {
+                eventTotal: result.eventTotal,
+                hasNextPage: result.hasNextPage,
+                nextCursor: result.nextCursor,
+            },
+        });
     },
 
     //Login required

@@ -5,6 +5,36 @@ import TransactionRepository from "../../repositories/transaction.repository";
 import { Prisma, TransactionStatus } from "../../generated/prisma";
 
 const EventService = {
+    getActiveEventsPaginated: async (query: EventPaginationQuerySchema) => {
+        const now = new Date();
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findAllActiveEvent(query.limit, query.cursor, now),
+            EventRepository.countActiveEvents(now),
+        ]);
+        const hasNextPage = fetchedEvents.length > query.limit;
+        const events = hasNextPage
+            ? fetchedEvents.slice(0, query.limit)
+            : fetchedEvents;
+
+        return {
+            events: events.map(({ ticketTypes, ...event }) => {
+                if (event.isFree) {
+                    return event;
+                }
+
+                const prices = ticketTypes.map(({ price }) => Number(price));
+                return {
+                    ...event,
+                    minTicketPrice: prices.length > 0 ? Math.min(...prices) : null,
+                    maxTicketPrice: prices.length > 0 ? Math.max(...prices) : null,
+                };
+            }),
+            eventTotal,
+            hasNextPage,
+            nextCursor: hasNextPage ? events[events.length - 1].id : null,
+        };
+    },
+
     getEventsPaginated: async (
         where: Prisma.EventWhereInput,
         query: EventPaginationQuerySchema
