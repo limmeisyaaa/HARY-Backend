@@ -44,7 +44,17 @@ Customers and organizers are **separate accounts**, so the login screen needs a 
 
 ---
 
-## 2. Profile
+## 2. Points
+
+| Method | Path | Auth | Query |
+|---|---|---|---|
+| GET | `/points?limit=12&cursor=<uuid>` | customer token | `limit` (1-50, default 12), `cursor` (optional) |
+
+Points are ordered by `expiresAt` ascending, with the soonest expiration first. The response includes `pagination.pointTotal`, `hasNextPage`, and `nextCursor`.
+
+---
+
+## 3. Profile
 
 The same routes exist for both account types: use `/customer/...` or `/organizer/...`.
 
@@ -57,7 +67,7 @@ The same routes exist for both account types: use `/customer/...` or `/organizer
 
 ---
 
-## 3. Events
+## 4. Events
 
 ### Public list (no login needed)
 
