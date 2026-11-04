@@ -1,6 +1,12 @@
 import { CustomersEventResponseDTO } from "../dtos/customer-event.dto";
 import AppError from "../errors/app-error";
-import { GiftStatus, Prisma, StatusUpdater, Transaction, TransactionStatus } from "../generated/prisma";
+import {
+  GiftStatus,
+  Prisma,
+  StatusUpdater,
+  Transaction,
+  TransactionStatus,
+} from "../generated/prisma";
 import { prisma } from "../libs/prisma.client";
 
 export type updateCheckoutTxParams = {
@@ -43,14 +49,90 @@ const TransactionRepository = {
     });
   },
 
+  countTransactionsByEventIds: async (eventIds: string[]) => {
+    if (eventIds.length === 0) return [];
+
+    return prisma.transaction.groupBy({
+      by: ["eventId", "status"],
+      where: { eventId: { in: eventIds } },
+      _count: { _all: true },
+    });
+  },
+
   updateTransactionStatus: async (id: string, status: TransactionStatus) => {
-    return await prisma.transaction.update({
-      where: {
-        id: id,
-      },
-      data: {
-        status: status,
-      },
+    return prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id },
+        select: {
+          status: true,
+          eventId: true,
+          customerId: true,
+          pointsUsed: true,
+          voucherId: true,
+          couponId: true,
+          quantity: true,
+        },
+      });
+
+      if (!transaction) {
+        throw new Error(`Transaction with id ${id} not found`);
+      }
+
+      // race condition guard, so when 2 organizer updates the same transaction, it gets denied rather than error
+      const updated = await tx.transaction.updateMany({
+        where: { id, status: TransactionStatus.WAITING_CONFIRMATION },
+        data: {
+          status,
+          statusUpdatedBy: StatusUpdater.ORGANIZER,
+          ...(status == TransactionStatus.REJECTED ? { couponId: null } : {}), // unlink coupon onto status rejected transactions
+        },
+      });
+
+      if (updated.count === 0)
+        throw new AppError("Transaction already being processed or not a waiting for confirmation", 409);
+
+      // this way, transaction is first update, then we cleanup other tables related to it
+
+      if (status === TransactionStatus.REJECTED) {
+        await tx.event.update({
+          where: { id: transaction.eventId },
+          data: { availableSeats: { increment: transaction.quantity } },
+        });
+
+        if (transaction.pointsUsed.greaterThan(0)) {
+
+          await tx.pointRecord.create({
+            data: {
+              customerId: transaction.customerId,
+              amount: Number(transaction.pointsUsed),
+              expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+              status: GiftStatus.AVAILABLE,
+            },
+          });
+        }
+
+        //voucher should still be available to anyone, since its global
+
+        if (transaction.couponId) {
+          await tx.coupon.update({
+            where: { id: transaction.couponId },
+            data: {
+              isUsed: false,
+              status: GiftStatus.AVAILABLE,
+            },
+          });
+        }
+      }
+
+      if (status === TransactionStatus.DONE && transaction.couponId) {
+        await tx.coupon.update({
+          where: { id: transaction.couponId },
+          data: {
+            status: GiftStatus.REDEEMED,
+          },
+        });
+      }
+      return tx.transaction.findUnique({ where: { id } });
     });
   },
 
@@ -218,7 +300,12 @@ const TransactionRepository = {
       const statusUpdated = await tx.transaction.updateMany({
         where: {
           id: transactionId,
-          status: { in: [TransactionStatus.WAITING_PAYMENT, TransactionStatus.WAITING_CONFIRMATION] },
+          status: {
+            in: [
+              TransactionStatus.WAITING_PAYMENT,
+              TransactionStatus.WAITING_CONFIRMATION,
+            ],
+          },
         },
         data: {
           status: finalStatus,

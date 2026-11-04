@@ -6,8 +6,10 @@ import { imageUploader } from "../middlewares/uploader.middleware";
 const eventRouter = Router();
 
 //Guest accessable
-eventRouter.get("/find-event/:id", EventController.getEventById);
 eventRouter.get("/all-event", EventController.getAllEvent);
+
+//Customer accessable
+eventRouter.get("/:id", verifyAccessToken, EventController.getEventById);
 
 //Organizer event management
 eventRouter.post(
@@ -19,7 +21,7 @@ eventRouter.post(
 );
 
 eventRouter.patch(
-    "/event",
+    "/organizer/edit-event",
     verifyAccessToken,
     userTypeGuard("ORGANIZER"),
     imageUploader().single("eventPicture"),
@@ -29,15 +31,22 @@ eventRouter.patch(
 eventRouter.get(
     "/event/:id", 
     verifyAccessToken, 
-    roleGuard("ADMIN", "SUPER_ADMIN"), 
+    userTypeGuard("ORGANIZER"),
     EventController.getCustomersOfEvent
 );
 
 eventRouter.get(
     "/organizer/all-event", 
     verifyAccessToken, 
-    roleGuard("ADMIN", "SUPER_ADMIN"), 
+    userTypeGuard("ORGANIZER"),
     EventController.getAllEventByOrganizerName
+);
+
+eventRouter.get(
+    "/organizer/all-event/transaction-summary",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.getAllEventWithTransactionSummary
 );
 
 export default eventRouter;

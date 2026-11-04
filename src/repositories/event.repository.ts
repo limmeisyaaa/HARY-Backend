@@ -28,9 +28,23 @@ const EventRepository = {
         });
     },
 
-    findAllActiveEvent: async (): Promise<Event[] | null> => {
+    findAllActiveEvent: async (limit: number, cursor?: string, now = new Date()) => {
         return await prisma.event.findMany({
-            where: { endDate: new Date },
+            where: { endDate: { gt: now } },
+            orderBy: [{ startDate: "asc" }, { id: "asc" }],
+            take: limit + 1,
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            include: {
+                ticketTypes: {
+                    select: { price: true },
+                },
+            },
+        });
+    },
+
+    countActiveEvents: async (now = new Date()): Promise<number> => {
+        return await prisma.event.count({
+            where: { endDate: { gt: now } },
         });
     },
 
@@ -69,6 +83,10 @@ const EventRepository = {
                 },
             },
         });
+    },
+
+    countEvents: async (where: Prisma.EventWhereInput): Promise<number> => {
+        return await prisma.event.count({ where });
     },
 
     findActiveEventByOrganizerId: async (organizerId: string): Promise<Event[] | null> => {

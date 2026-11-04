@@ -12,8 +12,9 @@ export const transactionCheckoutSchema = z.strictObject({
 
 export const transactionUpdateStatusSchema = z.strictObject({
 	id: z.string().uuid("Invalid event ID. Expected a UUID."),
-	status: z.nativeEnum(TransactionStatus, {
-        message: "Invalid transaction status"
+	// Organizer hanya boleh approve (DONE) atau reject (REJECTED)
+	status: z.enum([TransactionStatus.DONE, TransactionStatus.REJECTED], {
+        message: "Status must be DONE or REJECTED"
     })
 });
 

@@ -7,11 +7,12 @@ import {
   transactionUpdateStatusSchema,
 } from "../../validators/transaction.validator";
 import TransactionService from "./transaction.service";
+import AppError from "../../errors/app-error";
 
 const TransactionController = {
   async viewTransactionProof(req: Request, res: Response) {
     const { id } = transactionIdParamsSchema.parse(req.params);
-    const trxProof = TransactionRepository.viewTransactionProof(id);
+    const trxProof = await TransactionRepository.viewTransactionProof(id);
     res.send({
       message: "View transaction proof successfully!",
       data: trxProof,
@@ -20,9 +21,14 @@ const TransactionController = {
 
   async transactionApproval(req: Request, res: Response) {
     const data = transactionUpdateStatusSchema.parse(req.body);
+
+    if(req.auth.userType === "CUSTOMER") throw new AppError("Organizer only", 403);
+
+    const eventOrganizerName = req.auth.eventOrganizerName
+    const update = await TransactionService.updateStatusTransaction(data, eventOrganizerName);
     res.send({
-      message: `Success to change transaction status to ${data.status}!`,
-      data: TransactionService.updateStatusTransaction(data),
+      message: `Success to change transaction status of ${data.id} to ${data.status}!`,
+      data: update,
     });
   },
 

@@ -1,6 +1,7 @@
 import AppError from "../../errors/app-error";
 import { TransactionStatus } from "../../generated/prisma";
 import CouponRepository from "../../repositories/coupon.repository";
+import EventRepository from "../../repositories/event.repository";
 import PointRepository from "../../repositories/point.repository";
 import TicketTypeRepository from "../../repositories/ticket-type.repository";
 import TransactionRepository from "../../repositories/transaction.repository";
@@ -12,7 +13,19 @@ import {
 } from "../../validators/transaction.validator";
 
 const TransactionService = {
-  updateStatusTransaction: async (data: TransactionUpdateStatusSchema) => {
+  updateStatusTransaction: async (data: TransactionUpdateStatusSchema, eventOrganizerName: string) => {
+    const transaction = await TransactionRepository.findById(data.id);
+
+    if (!transaction) {
+      throw new Error(`Transaction with id ${data.id} not found`);
+    }
+
+    const event = await EventRepository.findById(transaction.eventId)
+
+    if(!event) throw new AppError("event not found!", 404);
+
+    if(eventOrganizerName !== event.eventOrganizerName) throw new AppError("Unauthorized operation!", 403);
+    
     return TransactionRepository.updateTransactionStatus(data.id, data.status);
   },
   updateCheckout: async (
@@ -203,11 +216,13 @@ const TransactionService = {
   },
   cancelTransaction: async (id: string, customerId: string) => {
     const findTransaction = await TransactionRepository.findById(id);
-    if(findTransaction == null) throw new AppError("Transaction not found", 404);
+    if (findTransaction == null)
+      throw new AppError("Transaction not found", 404);
 
-    if(findTransaction.customerId != customerId) throw new AppError("Unauthorized request detected", 403);
+    if (findTransaction.customerId != customerId)
+      throw new AppError("Unauthorized request detected", 403);
 
-    const status ="CANCELED";
+    const status = "CANCELED";
     const updatedBy = "CUSTOMER";
     return await TransactionRepository.releaseTransaction(
       id,

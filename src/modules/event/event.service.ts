@@ -2,44 +2,136 @@ import EventRepository from "../../repositories/event.repository";
 import AppError from "../../errors/app-error";
 import { EventInputSchema, EventPaginationQuerySchema } from "../../validators/event.validator";
 import TransactionRepository from "../../repositories/transaction.repository";
-import { Prisma } from "../../generated/prisma";
 import { uploadEventPicture } from "../cloudinary/cloudinary.service";
+import { Prisma, TransactionStatus } from "../../generated/prisma";
 
 const EventService = {
+    getActiveEventsPaginated: async (query: EventPaginationQuerySchema) => {
+        const now = new Date();
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findAllActiveEvent(query.limit, query.cursor, now),
+            EventRepository.countActiveEvents(now),
+        ]);
+        const hasNextPage = fetchedEvents.length > query.limit;
+        const events = hasNextPage
+            ? fetchedEvents.slice(0, query.limit)
+            : fetchedEvents;
+
+        return {
+            events: events.map(({ ticketTypes, ...event }) => {
+                if (event.isFree) {
+                    return event;
+                }
+
+                const prices = ticketTypes.map(({ price }) => Number(price));
+                return {
+                    ...event,
+                    minTicketPrice: prices.length > 0 ? Math.min(...prices) : null,
+                    maxTicketPrice: prices.length > 0 ? Math.max(...prices) : null,
+                };
+            }),
+            eventTotal,
+            hasNextPage,
+            nextCursor: hasNextPage ? events[events.length - 1].id : null,
+        };
+    },
+
     getEventsPaginated: async (
         where: Prisma.EventWhereInput,
         query: EventPaginationQuerySchema
     ) => {
-        // Gabungkan filter dasar (public/organizer) dengan filter pencarian dari query
-        const filters: Prisma.EventWhereInput[] = [where];
-        if (query.search) {
-            filters.push({
-                OR: [
-                    { name: { contains: query.search, mode: "insensitive" } },
-                    { description: { contains: query.search, mode: "insensitive" } },
-                    { eventOrganizerName: { contains: query.search, mode: "insensitive" } },
-                ],
-            });
-        }
-        // Event yang berlangsung (overlap) di dalam rentang tanggal, dihitung per hari WIB
-        if (query.from && query.to) {
-            filters.push({
-                startDate: { lte: new Date(`${query.to}T23:59:59.999+07:00`) },
-                endDate: { gte: new Date(`${query.from}T00:00:00+07:00`) },
-            });
-        }
-
-        const fetchedEvents = await EventRepository.findEventsPaginated(
-            { AND: filters },
-            query.limit,
-            query.cursor
-        );
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findEventsPaginated(where, query.limit, query.cursor),
+            EventRepository.countEvents(where),
+        ]);
         const hasNextPage = fetchedEvents.length > query.limit;
         const pageEvents = hasNextPage
             ? fetchedEvents.slice(0, query.limit)
             : fetchedEvents;
         return {
-            items: pageEvents,
+            events: pageEvents,
+            eventTotal,
+            hasNextPage,
+            nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,
+        };
+    },
+
+    getEventsWithTransactionSummary: async (
+        where: Prisma.EventWhereInput,
+        query: EventPaginationQuerySchema
+    ) => {
+        const [fetchedEvents, eventTotal] = await Promise.all([
+            EventRepository.findEventsPaginated(where, query.limit, query.cursor),
+            EventRepository.countEvents(where),
+        ]);
+        const hasNextPage = fetchedEvents.length > query.limit;
+        const pageEvents = hasNextPage
+            ? fetchedEvents.slice(0, query.limit)
+            : fetchedEvents;
+        const transactionCounts = await TransactionRepository.countTransactionsByEventIds(
+            pageEvents.map(({ id }) => id)
+        );
+        const transactionCountsByEvent = new Map<
+            string,
+            { total: number; pending: number; done: number, expired: number; cancelled: number; rejected: number }
+        >();
+
+        for (const { eventId, status, _count } of transactionCounts) {
+            const counts = transactionCountsByEvent.get(eventId) ?? {
+                total: 0,
+                pending: 0,
+                done: 0,
+                expired: 0,
+                cancelled: 0,
+                rejected: 0
+            };
+            const count = _count._all;
+
+            counts.total += count;
+            if (
+                status === TransactionStatus.WAITING_PAYMENT ||
+                status === TransactionStatus.WAITING_CONFIRMATION
+            ) {
+                counts.pending += count;
+            } else if (status === TransactionStatus.DONE) {
+                counts.done += count;
+            } else if (status === TransactionStatus.EXPIRED ) {
+                counts.expired += count;
+            } else if (status === TransactionStatus.CANCELED ) {
+                counts.cancelled += count;
+            } else if (status === TransactionStatus.REJECTED ) {
+                counts.rejected += count;
+            } 
+
+            transactionCountsByEvent.set(eventId, counts);
+        }
+
+        return {
+            events: pageEvents.map((event) => {
+                const counts = transactionCountsByEvent.get(event.id) ?? {
+                    total: 0,
+                    pending: 0,
+                    done: 0,
+                    expired: 0,
+                    cancelled: 0,
+                    rejected: 0
+                };
+
+                return {
+                    eventId: event.id,
+                    eventName: event.name,
+                    start_date: event.startDate,
+                    end_date: event.endDate,
+                    availableSeats: event.availableSeats,
+                    totalTransaction: counts.total,
+                    pendingTransaction: counts.pending,
+                    doneTransaction: counts.done,
+                    expiredTransaction: counts.expired,
+                    cancelledTransaction: counts.cancelled,
+                    rejectedTransaction: counts.rejected,
+                };
+            }),
+            eventTotal,
             hasNextPage,
             nextCursor: hasNextPage ? pageEvents[pageEvents.length - 1].id : null,
         };
@@ -80,7 +172,11 @@ const EventService = {
         });
     },
 
-    editEvent: async (organisationName: string, data: EventInputSchema, eventPicture?: Express.Multer.File) => {
+    editEvent: async (
+        organisationName: string,
+        data: EventInputSchema,
+        eventPictureUrl?: string
+    ) => {
         if (!data.id) throw new AppError("Id event missing for edit event!", 400);
         const eventId = data.id;
 
@@ -105,10 +201,10 @@ const EventService = {
             throw new AppError("Ticket types cannot be changed after transactions exist!", 409);
         }
 
-        // Upload gambar baru hanya setelah lolos cek kepemilikan event
-        const eventPictureUrl = eventPicture
-            ? await uploadEventPicture(eventPicture, organisationName, "ORGANIZER")
-            : undefined;
+        // // Upload gambar baru hanya setelah lolos cek kepemilikan event
+        // const eventPictureUrl = eventPicture
+        //     ? await uploadEventPicture(eventPicture, organisationName, "ORGANIZER")
+        //     : undefined;
 
         return EventRepository.updateEvent(eventId, {
             ...(eventPictureUrl ? { eventPicture: eventPictureUrl } : {}),
@@ -121,6 +217,7 @@ const EventService = {
             endDate: new Date(data.endDate),
             availableSeats: data.availableSeats,
             isFree: data.isFree,
+            ...(eventPictureUrl ? { eventPicture: eventPictureUrl } : {}),
             ...(ticketTypesChanged
                 ? {
                       ticketTypes: {

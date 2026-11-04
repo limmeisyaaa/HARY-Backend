@@ -10,17 +10,21 @@ const transactionRouter = Router();
 
 transactionRouter.use(verifyAccessToken);
 
-transactionRouter.patch(
-  "/transaction-status",
-  roleGuard("SUPER_ADMIN"),
-  TransactionController.transactionApproval,
-);
+// transactionRouter.patch(
+//   "/transaction-status",
+//   roleGuard("SUPER_ADMIN"),
+//   TransactionController.transactionApproval,
+// );
+
+transactionRouter.patch("/status", roleGuard("SUPER_ADMIN"), TransactionController.transactionApproval);
 
 transactionRouter.post(
   "/",
   userTypeGuard("CUSTOMER"),
   TransactionController.transactionCheckout,
 );
+transactionRouter.get("/organizer/:id", roleGuard("ADMIN", "SUPER_ADMIN"), TransactionController.viewTransactionProof);
+
 
 transactionRouter.patch(
   "/:id",
