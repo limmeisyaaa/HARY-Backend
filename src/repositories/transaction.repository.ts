@@ -89,7 +89,10 @@ const TransactionRepository = {
       });
 
       if (updated.count === 0)
-        throw new AppError("Transaction already being processed or not a waiting for confirmation", 409);
+        throw new AppError(
+          "Transaction already being processed or not a waiting for confirmation",
+          409,
+        );
 
       // this way, transaction is first update, then we cleanup other tables related to it
 
@@ -100,7 +103,6 @@ const TransactionRepository = {
         });
 
         if (transaction.pointsUsed.greaterThan(0)) {
-
           await tx.pointRecord.create({
             data: {
               customerId: transaction.customerId,
@@ -344,6 +346,51 @@ const TransactionRepository = {
       }
 
       return await tx.transaction.findUnique({ where: { id: transactionId } });
+    });
+  },
+
+  submitPaymentProof: async (id: string, paymentProofUrl: string) => {
+    const now = new Date();
+    const update = await prisma.transaction.updateMany({
+      where: {
+        id: id,
+        status: TransactionStatus.WAITING_PAYMENT,
+        expiresAt: { gt: now },
+      },
+      data: {
+        paymentProofUrl,
+        proofUploadedAt: now,
+        status: TransactionStatus.WAITING_CONFIRMATION,
+        statusUpdatedBy: StatusUpdater.CUSTOMER,
+        confirmationDeadline: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    if (update.count === 0)
+      throw new AppError("Transaction already processed", 409);
+    return prisma.transaction.findUnique({ where: { id } });
+  },
+
+  findByCustomer: async (customerId: string, status?: TransactionStatus) => {
+    return prisma.transaction.findMany({
+      where: {
+        customerId,
+        ...(status ? { status } : {}),
+      },
+      include: {
+        event: {
+          select: { id: true, name: true, startDate: true, eventPicture: true },
+        },
+        ticketType: { select: { name: true, price: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findByIdForCustomer: async (id: string, customerId: string) => {
+    return prisma.transaction.findUnique({
+      where: { id, customerId },
+      include: { event: true, ticketType: true, voucher: true, coupon: true },
     });
   },
 };

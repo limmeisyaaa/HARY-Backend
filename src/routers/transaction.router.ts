@@ -5,6 +5,7 @@ import {
   userTypeGuard,
   verifyAccessToken,
 } from "../middlewares/auth.middleware";
+import { imageUploader } from "../middlewares/uploader.middleware";
 
 const transactionRouter = Router();
 
@@ -15,16 +16,40 @@ transactionRouter.use(verifyAccessToken);
 //   roleGuard("SUPER_ADMIN"),
 //   TransactionController.transactionApproval,
 // );
+transactionRouter.get(
+  "/me/:id",
+  userTypeGuard("CUSTOMER"),
+  TransactionController.getMyTransactionById,
+);
+transactionRouter.get(
+  "/me",
+  userTypeGuard("CUSTOMER"),
+  TransactionController.getMyTransactions,
+);
 
-transactionRouter.patch("/status", roleGuard("SUPER_ADMIN"), TransactionController.transactionApproval);
+transactionRouter.patch(
+  "/:id/payment-proof",
+  userTypeGuard("CUSTOMER"),
+  imageUploader().single("paymentProof"),
+  TransactionController.transactionPaymentProof,
+);
+
+transactionRouter.patch(
+  "/status",
+  roleGuard("SUPER_ADMIN"),
+  TransactionController.transactionApproval,
+);
 
 transactionRouter.post(
   "/",
   userTypeGuard("CUSTOMER"),
   TransactionController.transactionCheckout,
 );
-transactionRouter.get("/organizer/:id", roleGuard("ADMIN", "SUPER_ADMIN"), TransactionController.viewTransactionProof);
-
+transactionRouter.get(
+  "/organizer/:id",
+  roleGuard("ADMIN", "SUPER_ADMIN"),
+  TransactionController.viewTransactionProof,
+);
 
 transactionRouter.patch(
   "/:id",
@@ -33,10 +58,10 @@ transactionRouter.patch(
 );
 
 transactionRouter.patch(
-    "/:id/cancel",
-    userTypeGuard("CUSTOMER"),
-    TransactionController.transactionCancel,
-)
+  "/:id/cancel",
+  userTypeGuard("CUSTOMER"),
+  TransactionController.transactionCancel,
+);
 
 transactionRouter.get(
   "/:id",

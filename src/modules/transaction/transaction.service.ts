@@ -11,21 +11,26 @@ import {
   TransactionUpdateCheckoutSchema,
   TransactionUpdateStatusSchema,
 } from "../../validators/transaction.validator";
+import { uploadPaymentProof } from "../cloudinary/cloudinary.service";
 
 const TransactionService = {
-  updateStatusTransaction: async (data: TransactionUpdateStatusSchema, eventOrganizerName: string) => {
+  updateStatusTransaction: async (
+    data: TransactionUpdateStatusSchema,
+    eventOrganizerName: string,
+  ) => {
     const transaction = await TransactionRepository.findById(data.id);
 
     if (!transaction) {
       throw new Error(`Transaction with id ${data.id} not found`);
     }
 
-    const event = await EventRepository.findById(transaction.eventId)
+    const event = await EventRepository.findById(transaction.eventId);
 
-    if(!event) throw new AppError("event not found!", 404);
+    if (!event) throw new AppError("event not found!", 404);
 
-    if(eventOrganizerName !== event.eventOrganizerName) throw new AppError("Unauthorized operation!", 403);
-    
+    if (eventOrganizerName !== event.eventOrganizerName)
+      throw new AppError("Unauthorized operation!", 403);
+
     return TransactionRepository.updateTransactionStatus(data.id, data.status);
   },
   updateCheckout: async (
@@ -230,6 +235,34 @@ const TransactionService = {
       updatedBy,
     );
   },
+
+  submitPaymentProof: async (
+    id: string,
+    customerId: string,
+    file: Express.Multer.File,
+  ) => {
+    const transaction = await TransactionRepository.findById(id);
+    if (!transaction) throw new AppError("transaction not found", 404);
+    if (transaction.customerId !== customerId)
+      throw new AppError("Unauthorized request", 403);
+    if (transaction.status !== "WAITING_PAYMENT")
+      throw new AppError("Transaction not waiting for payment", 409);
+    if (transaction.expiresAt < new Date())
+      throw new AppError("Transaction expired", 400);
+
+    const url = await uploadPaymentProof(file, id);
+    return TransactionRepository.submitPaymentProof(id, url);
+  },
+  
+  getMyTransactions: async (customerId: string, status?: TransactionStatus) => {
+    return await TransactionRepository.findByCustomer(customerId, status);
+  },
+
+  getMyTransactionById: async (id: string, customerId: string) => {
+    const transaction = await TransactionRepository.findByIdForCustomer(id, customerId);
+    if(!transaction) throw new AppError("Transaction not found", 404);
+    return transaction
+  }
 };
 
 export default TransactionService;
