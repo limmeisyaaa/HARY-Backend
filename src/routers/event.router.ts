@@ -29,6 +29,13 @@ eventRouter.patch(
 );
 
 eventRouter.get(
+    "/organizer/reports",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.getOrganizerReport
+);
+
+eventRouter.get(
     "/event/:id", 
     verifyAccessToken, 
     userTypeGuard("ORGANIZER"),
@@ -48,5 +55,13 @@ eventRouter.get(
     userTypeGuard("ORGANIZER"),
     EventController.getAllEventWithTransactionSummary
 );
+
+eventRouter.get(
+    "/organizer/reports",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    EventController.getOrganizerReport
+);
+
 
 export default eventRouter;
