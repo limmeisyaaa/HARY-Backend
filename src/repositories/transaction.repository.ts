@@ -29,6 +29,27 @@ const TransactionRepository = {
     });
   },
 
+  findEmailDetailsById: async (id: string) => {
+    return prisma.transaction.findUnique({
+      where: { id },
+      select: {
+        quantity: true,
+        totalPrice: true,
+        customer: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        event: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  },
+
   viewTransactionForEvent: async (
     eventId: string,
   ): Promise<Transaction[] | null> => {
