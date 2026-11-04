@@ -1,5 +1,6 @@
 import { Router } from "express";
 import EventController from "../modules/event/event.controller";
+import AttendeeController from "../modules/attendee/attendee.controller";
 import { roleGuard, userTypeGuard, verifyAccessToken } from "../middlewares/auth.middleware";
 import { imageUploader } from "../middlewares/uploader.middleware";
 
@@ -33,6 +34,13 @@ eventRouter.get(
     verifyAccessToken,
     userTypeGuard("ORGANIZER"),
     EventController.getOrganizerReport
+);
+
+eventRouter.get(
+    "/organizer/events/:id/attendees",
+    verifyAccessToken,
+    userTypeGuard("ORGANIZER"),
+    AttendeeController.getEventAttendees
 );
 
 eventRouter.get(

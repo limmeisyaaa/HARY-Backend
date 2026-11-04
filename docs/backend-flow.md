@@ -104,6 +104,9 @@ Free events have no `minTicketPrice` or `maxTicketPrice`.
 | GET | `/events/organizer/all-event/transaction-summary?...` | per event: total, pending, done, expired, cancelled and rejected counts |
 | GET | `/events/organizer/reports?groupBy=month&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=12&cursor=<uuid>` | dashboard/report data scoped to the organizer's `eventOrganizerName` |
 | GET | `/events/event/:id` | customers who bought tickets for this event |
+| GET | `/events/organizer/events/:id/attendees?limit=12&cursor=<uuid>` | paginated confirmed attendee list: name, ticket quantity, and total price paid |
+
+The attendee endpoint is new and does not change the existing `/events/event/:id` response. It returns only `DONE` transactions for events owned by the authenticated organizer.
 
 For reports, `groupBy` accepts `year`, `month` or `day` (default `month`). `from` and `to` are optional but must be sent together; both boundary dates are included. Without a range, daily reports cover 30 days, monthly reports cover 12 months and yearly reports cover 5 calendar years. Event list pagination uses `limit` (1-50, default 12) and `cursor`.
 
