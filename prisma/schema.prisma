@@ -72,12 +72,12 @@ model Coupon {
 model Event {
   id                    String        @id @default(uuid())
   organizerId           String        @map("organizer_id")
-  eventOrganizerName    String
+  eventOrganizerName    String        @map("event_organizer_name")
   name                  String
   description           String
   category              String
   location              String
-  eventPicture          String?         @map("event_picture")
+  eventPicture          String?       @map("event_picture")
   startDate             DateTime      @map("start_date")
   endDate               DateTime      @map("end_date")
   availableSeats        Int           @map("available_seats")

@@ -5,6 +5,8 @@ import {
   eventPaginationQuerySchema,
 } from "../../validators/event.validator";
 import EventService from "./event.service";
+import EventReportService from "./event-report.service";
+import { eventReportQuerySchema } from "../../validators/event-report.validator";
 import { uploadEventPicture } from "../cloudinary/cloudinary.service";
 import AppError from "../../errors/app-error";
 
@@ -141,6 +143,23 @@ const EventController = {
     res.send({
       message: "Transaction summaries retrieved successfully!",
       data: events,
+    });
+  },
+
+  async getOrganizerReport(req: Request, res: Response) {
+    if (req.auth.userType !== "ORGANIZER") {
+      throw new AppError("Organizer only", 403);
+    }
+
+    const query = eventReportQuerySchema.parse(req.query);
+    const report = await EventReportService.getOrganizerReport(
+      req.auth.eventOrganizerName,
+      query,
+    );
+
+    res.send({
+      message: "Organizer event report retrieved successfully!",
+      data: report,
     });
   },
 };

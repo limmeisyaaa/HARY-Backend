@@ -63,7 +63,7 @@ const OrganizerService = {
 		);
 		
 		if (isCurrentPasswordValid) {
-			throw new AppError("You cannot change password with your previous password!", 400);
+			throw new AppError("Your new password cannot be the same as your current password!", 400);
 		}
 
 		const hashedPassword = await AuthService.hashPassword(input.newPassword);

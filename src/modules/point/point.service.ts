@@ -1,6 +1,7 @@
 // import { PointRecord } from "@prisma/client";
 import PointRepository from "../../repositories/point.repository";
 import { GiftStatus, PointRecord } from "../../generated/prisma";
+import { PointPaginationQuery } from "../../validators/point.validator";
 
 const PointService = {
     createPointRecord: async (customerId: string): Promise<PointRecord> => {
@@ -13,7 +14,25 @@ const PointService = {
             amount: 10000,
             status: GiftStatus.AVAILABLE
         });
+    },
+
+    getPoints: async (customerId: string, query: PointPaginationQuery) => {
+        const [fetchedPoints, pointTotal] = await Promise.all([
+            PointRepository.findByCustomerId(customerId, query.limit, query.cursor),
+            PointRepository.countByCustomerId(customerId),
+        ]);
+        const hasNextPage = fetchedPoints.length > query.limit;
+        const points = hasNextPage
+            ? fetchedPoints.slice(0, query.limit)
+            : fetchedPoints;
+
+        return {
+            points,
+            pointTotal,
+            hasNextPage,
+            nextCursor: hasNextPage ? points[points.length - 1].id : null,
+        };
     }
-}
+};
 
 export default PointService;

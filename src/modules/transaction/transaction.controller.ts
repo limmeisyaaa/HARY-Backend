@@ -9,6 +9,8 @@ import {
 } from "../../validators/transaction.validator";
 import TransactionService from "./transaction.service";
 import AppError from "../../errors/app-error";
+import sendEmail from "../nodemailer/mailer.service";
+import generateTransactionEmailHtml from "../../libs/template-email";
 
 const TransactionController = {
   async viewTransactionProof(req: Request, res: Response) {
@@ -26,14 +28,38 @@ const TransactionController = {
     if (req.auth.userType === "CUSTOMER")
       throw new AppError("Organizer only", 403);
 
-    const eventOrganizerName = req.auth.eventOrganizerName;
-    const update = await TransactionService.updateStatusTransaction(
-      data,
-      eventOrganizerName,
-    );
+    const eventOrganizerName = req.auth.eventOrganizerName
+    const emailDetails = await TransactionRepository.findEmailDetailsById(data.id);
+    if (!emailDetails) {
+      throw new AppError("Transaction email details not found!", 404);
+    }
+
+    const update = await TransactionService.updateStatusTransaction(data, eventOrganizerName);
+
+    const emailBody = generateTransactionEmailHtml({
+      customerName: emailDetails.customer.name,
+      transactionId: data.id,
+      status: data.status,
+      eventName: emailDetails.event.name,
+      ticketCount: emailDetails.quantity,
+      totalPrice: Number(emailDetails.totalPrice),
+    });
+
+    let emailSent = true;
+    try {
+      await sendEmail(emailBody, emailDetails.customer.email);
+    } catch (error) {
+      emailSent = false;
+      console.error("Transaction status updated, but notification email could not be sent:", error);
+    }
+
     res.send({
       message: `Success to change transaction status of ${data.id} to ${data.status}!`,
       data: update,
+      emailNotification: {
+        sent: emailSent,
+        ...(!emailSent ? { message: "Transaction updated, but notification email could not be sent." } : {}),
+      },
     });
   },
 

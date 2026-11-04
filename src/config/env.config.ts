@@ -25,3 +25,8 @@ export const DIRECTORY_CLOUDINARY = process.env.DIRECTORY_CLOUDINARY;
 
 export const NON_ACTIVATE_COUPON=process.env.NON_ACTIVATE_COUPON || "0 0 * * *";
 export const NON_ACTIVATE_POINT=process.env.NON_ACTIVATE_POINT || "0 0 * * *";
+
+export const SMTP_HOST = process.env.SMTP_HOST || "";
+export const SMTP_PORT = process.env.SMTP_PORT || 587;
+export const SMTP_USER = process.env.SMTP_USER || "";
+export const SMTP_PASS = process.env.SMTP_PASS || "";

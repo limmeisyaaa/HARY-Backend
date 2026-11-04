@@ -44,7 +44,17 @@ Customers and organizers are **separate accounts**, so the login screen needs a 
 
 ---
 
-## 2. Profile
+## 2. Points
+
+| Method | Path | Auth | Query |
+|---|---|---|---|
+| GET | `/points?limit=12&cursor=<uuid>` | customer token | `limit` (1-50, default 12), `cursor` (optional) |
+
+Points are ordered by `expiresAt` ascending, with the soonest expiration first. The response includes `pagination.pointTotal`, `hasNextPage`, and `nextCursor`.
+
+---
+
+## 3. Profile
 
 The same routes exist for both account types: use `/customer/...` or `/organizer/...`.
 
@@ -57,7 +67,7 @@ The same routes exist for both account types: use `/customer/...` or `/organizer
 
 ---
 
-## 3. Events
+## 4. Events
 
 ### Public list (no login needed)
 
@@ -92,7 +102,15 @@ Free events have no `minTicketPrice` or `maxTicketPrice`.
 | PATCH | `/events/organizer/edit-event` | multipart, the same fields plus `id` |
 | GET | `/events/organizer/all-event?limit&cursor&search&from&to` | the organizer's own events (including finished ones) |
 | GET | `/events/organizer/all-event/transaction-summary?...` | per event: total, pending, done, expired, cancelled and rejected counts |
+| GET | `/events/organizer/reports?groupBy=month&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=12&cursor=<uuid>` | dashboard/report data scoped to the organizer's `eventOrganizerName` |
 | GET | `/events/event/:id` | customers who bought tickets for this event |
+| GET | `/events/organizer/events/:id/attendees?limit=12&cursor=<uuid>` | paginated confirmed attendee list: name, ticket quantity, and total price paid |
+
+The attendee endpoint is new and does not change the existing `/events/event/:id` response. It returns only `DONE` transactions for events owned by the authenticated organizer.
+
+For reports, `groupBy` accepts `year`, `month` or `day` (default `month`). `from` and `to` are optional but must be sent together; both boundary dates are included. Without a range, daily reports cover 30 days, monthly reports cover 12 months and yearly reports cover 5 calendar years. Event list pagination uses `limit` (1-50, default 12) and `cursor`.
+
+The report includes event totals by schedule (upcoming, ongoing, completed); transaction totals by status; completed tickets and revenue; payments awaiting organizer confirmation; a time series with transactions, completed transactions, tickets sold and revenue; and paginated event details with transaction count, tickets sold, revenue, review count and average rating. Revenue and tickets sold count `DONE` transactions only. Transaction and review metrics are filtered by their creation date; event schedule counts reflect the current date.
 
 **Multipart fields for creating or editing an event.** Every field is sent as a string:
 
