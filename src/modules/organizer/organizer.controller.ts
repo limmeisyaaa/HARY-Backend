@@ -1,10 +1,17 @@
 import type { Request, Response } from "express";
 import AppError from "../../errors/app-error";
-import { changeOrganizerPasswordSchema, updateOrganizerProfileSchema } from "../../validators/organizer.validator";
+import { changeOrganizerPasswordSchema, organizerIdParamsSchema, updateOrganizerProfileSchema } from "../../validators/organizer.validator";
 import OrganizerService from "./organizer.service";
 import OrganizerRepository from "../../repositories/organizer.repository";
 
 const OrganizerController = {
+	async getPublicProfile(req: Request, res: Response) {
+		const { id } = organizerIdParamsSchema.parse(req.params);
+		const profile = await OrganizerService.getPublicProfile(id);
+
+		res.send({ data: profile });
+	},
+
 	async updateProfile(req: Request, res: Response) {
 		const input = updateOrganizerProfileSchema.parse(req.body);
 		if (Object.keys(input).length === 0 && !req.file) {

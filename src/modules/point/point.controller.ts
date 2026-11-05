@@ -13,6 +13,7 @@ const PointController = {
       data: result.points,
       pagination: {
         pointTotal: result.pointTotal,
+        pointBalance: result.pointBalance,
         hasNextPage: result.hasNextPage,
         nextCursor: result.nextCursor,
       },

@@ -1,11 +1,14 @@
 import cron, { TaskFn } from 'node-cron';
 import { nonActiveCouponJob } from './jobs/coupon.job';
 import { nonActivePointJob } from './jobs/point.reward.job';
+import { cancelUnconfirmedJob, expirePaymentJob } from './jobs/transaction.job';
 
 const cronRunner = () => {
     //Call the function to run the cron job
     nonActiveCouponJob();
     nonActivePointJob();
+    expirePaymentJob();
+    cancelUnconfirmedJob();
 }
 
 export default cronRunner;

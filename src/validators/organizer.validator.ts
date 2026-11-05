@@ -12,3 +12,7 @@ export const changeOrganizerPasswordSchema = z.strictObject({
 });
 
 export type ChangeOrganizerPasswordInput = z.infer<typeof changeOrganizerPasswordSchema>;
+
+export const organizerIdParamsSchema = z.strictObject({
+	id: z.string().uuid("Invalid organizer ID. Expected a UUID."),
+});

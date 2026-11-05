@@ -393,26 +393,76 @@ const TransactionRepository = {
   },
 
   findByCustomer: async (customerId: string, status?: TransactionStatus) => {
-    return prisma.transaction.findMany({
+    const transactions = await prisma.transaction.findMany({
       where: {
         customerId,
         ...(status ? { status } : {}),
       },
       include: {
         event: {
-          select: { id: true, name: true, startDate: true, eventPicture: true },
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+            endDate: true,
+            eventPicture: true,
+            // this customer's review of the event (max 1) -> hasReviewed
+            reviews: { where: { customerId }, select: { id: true }, take: 1 },
+          },
         },
         ticketType: { select: { name: true, price: true } },
       },
       orderBy: { createdAt: "desc" },
     });
+
+    return transactions.map(({ event: { reviews, ...event }, ...transaction }) => ({
+      ...transaction,
+      event,
+      hasReviewed: reviews.length > 0,
+    }));
+  },
+
+  // Scheduler: customer didn't upload proof before expiresAt
+  findExpiredPayments: async (now: Date) => {
+    return prisma.transaction.findMany({
+      where: {
+        status: TransactionStatus.WAITING_PAYMENT,
+        expiresAt: { lt: now },
+      },
+      select: { id: true },
+    });
+  },
+
+  // Scheduler: organizer didn't approve/reject before confirmationDeadline
+  findOverdueConfirmations: async (now: Date) => {
+    return prisma.transaction.findMany({
+      where: {
+        status: TransactionStatus.WAITING_CONFIRMATION,
+        confirmationDeadline: { lt: now },
+      },
+      select: { id: true },
+    });
   },
 
   findByIdForCustomer: async (id: string, customerId: string) => {
-    return prisma.transaction.findUnique({
+    const transaction = await prisma.transaction.findUnique({
       where: { id, customerId },
-      include: { event: true, ticketType: true, voucher: true, coupon: true },
+      include: {
+        event: {
+          include: {
+            reviews: { where: { customerId }, select: { id: true }, take: 1 },
+          },
+        },
+        ticketType: true,
+        voucher: true,
+        coupon: true,
+      },
     });
+
+    if (!transaction) return null;
+
+    const { event: { reviews, ...event }, ...rest } = transaction;
+    return { ...rest, event, hasReviewed: reviews.length > 0 };
   },
 };
 

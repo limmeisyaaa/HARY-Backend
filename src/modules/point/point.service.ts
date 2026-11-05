@@ -17,9 +17,10 @@ const PointService = {
     },
 
     getPoints: async (customerId: string, query: PointPaginationQuery) => {
-        const [fetchedPoints, pointTotal] = await Promise.all([
+        const [fetchedPoints, pointTotal, pointBalance] = await Promise.all([
             PointRepository.findByCustomerId(customerId, query.limit, query.cursor),
             PointRepository.countByCustomerId(customerId),
+            PointRepository.sumUsableByCustomerId(customerId),
         ]);
         const hasNextPage = fetchedPoints.length > query.limit;
         const points = hasNextPage
@@ -29,6 +30,7 @@ const PointService = {
         return {
             points,
             pointTotal,
+            pointBalance,
             hasNextPage,
             nextCursor: hasNextPage ? points[points.length - 1].id : null,
         };

@@ -5,6 +5,12 @@ import { ChangeOrganizerPasswordInput, UpdateOrganizerProfileInput } from "../..
 import OrganizerRepository from "../../repositories/organizer.repository";
 
 const OrganizerService = {
+	getPublicProfile: async (id: string) => {
+		const profile = await OrganizerRepository.findPublicProfileById(id);
+		if (!profile) throw new AppError("Organizer not found!", 404);
+		return profile;
+	},
+
 	updateProfile: async (
 		organizerId: string,
 		input: UpdateOrganizerProfileInput

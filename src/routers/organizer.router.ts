@@ -6,6 +6,9 @@ import OrganizerController from "../modules/organizer/organizer.controller";
 
 const organizerRouter = Router();
 
+// public organizer profile (no login) — must stay above the auth middleware
+organizerRouter.get("/public/:id", OrganizerController.getPublicProfile);
+
 organizerRouter.use(verifyAccessToken, userTypeGuard("ORGANIZER"));
 
 //edit profile

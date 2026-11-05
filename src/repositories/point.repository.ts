@@ -22,6 +22,20 @@ const PointRepository = {
 		return await prisma.pointRecord.count({ where: { customerId } });
 	},
 
+	// Rupiah total of usable points (not used, AVAILABLE, not expired)
+	sumUsableByCustomerId: async (customerId: string): Promise<number> => {
+		const result = await prisma.pointRecord.aggregate({
+			where: {
+				customerId,
+				isUsed: false,
+				status: GiftStatus.AVAILABLE,
+				expiresAt: { gt: new Date() },
+			},
+			_sum: { amount: true },
+		});
+		return Number(result._sum.amount ?? 0);
+	},
+
 	findAvailablePointsByCustomerId: async (customerId: string): Promise<PointRecord[] | null> => {
     return await prisma.pointRecord.findMany({
         where: {

@@ -25,6 +25,19 @@ const CouponRepository = {
 		`
 	},
   
+	// Coupons the customer can still apply in the cart
+	findUsableByCustomer: async (customerId: string): Promise<Coupon[]> => {
+		return await prisma.coupon.findMany({
+			where: {
+				customerId,
+				isUsed: false,
+				status: GiftStatus.AVAILABLE,
+				expiresAt: { gt: new Date() },
+			},
+			orderBy: { expiresAt: "asc" },
+		});
+	},
+
 	create: async (data: Prisma.CouponUncheckedCreateInput) => {
 		return await prisma.coupon.create({data});
 	},
