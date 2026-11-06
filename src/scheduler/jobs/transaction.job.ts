@@ -2,7 +2,7 @@ import TransactionRepository from "../../repositories/transaction.repository";
 import { createScheduler } from "../runner";
 
 export const expirePaymentJob = () => {
-  createScheduler("* * * * *", async () => {
+  createScheduler("*/1 * * * *", async () => {
     const expired = await TransactionRepository.findExpiredPayments(new Date());
     let done = 0;
     for (const { id } of expired) {

@@ -204,7 +204,7 @@ const TransactionService = {
     } else {
       // define expires at
       price = seatsRequested * Number(ticketType.price);
-      expiresAt = new Date(Date.now() + 60 * 60 * 1000); // init time 1 hour from creation
+      expiresAt = new Date(Date.now() + 1 * 60 * 1000)//new Date(Date.now() + 60 * 60 * 1000); // init time 1 hour from creation
     }
 
     //create transaction
